@@ -3,291 +3,691 @@
 
 <head>
 
-<link
-    rel="stylesheet"
-    href="https://unpkg.com/leaflet/dist/leaflet.css"/>
-    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-    <link rel="stylesheet"
-    href="https://unpkg.com/leaflet-draw/dist/leaflet.draw.css"/>
-    <script src="https://unpkg.com/leaflet-image/leaflet-image.js"></script>
-    <script src="https://unpkg.com/leaflet-draw/dist/leaflet.draw.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <link rel="stylesheet" href="/static/style.css">
-
-
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet-draw/dist/leaflet.draw.css"/>
+<script src="https://unpkg.com/leaflet-image/leaflet-image.js"></script>
+<script src="https://unpkg.com/leaflet-draw/dist/leaflet.draw.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/style.css">
 
 </head>
 
-    <body>
+<body>
 
-        <h1 id = "header">Environmental Monitor/AI</h1>
+    <!-- ── HEADER ── -->
+    <h1 id="header">Environmental Monitor / AI</h1>
+    <p class="tagline">Satellite Analysis &nbsp;·&nbsp; Vegetation Tracking &nbsp;·&nbsp; AI Insights</p>
 
-<div style="margin:10px; text-align:center;">
-    <label><b>Select Country:</b></label>
+    <!-- ── CONTROLS STRIP ── -->
+    <div class="controls-strip">
 
-    <select id="countrySelect">
-        {% for country in countries %}
-            <option value="{{ country.country_code }}">
-                {{ country.country_code }}
-            </option>
-        {% endfor %}
-    </select>
-</div>
+        <div class="control-group">
+            <label for="countrySelect">Country</label>
+            <select id="countrySelect">
+                {% for country in countries %}
+                    <option value="{{ country.country_code }}">
+                        {{ country.country_code }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
 
+        <!-- yearSelector div kept exactly as-is for JS compatibility -->
+        <div id="yearSelector">
+            <label><b>Before year</b></label>
+            <select id="beforeYear">
+                <option value="2013">2013</option>
+                <option value="2014" selected>2014</option>
+                <option value="2015">2015</option>
+                <option value="2016">2016</option>
+                <option value="2017">2017</option>
+                <option value="2018">2018</option>
+                <option value="2019">2019</option>
+                <option value="2020">2020</option>
+            </select>
+        </div>
+
+        <!-- Visible year picker in the strip -->
+        <div class="control-group">
+            <label for="beforeYearVisible">Historical Year</label>
+            <select id="beforeYearVisible">
+                <option value="2013">2013</option>
+                <option value="2014" selected>2014</option>
+                <option value="2015">2015</option>
+                <option value="2016">2016</option>
+                <option value="2017">2017</option>
+                <option value="2018">2018</option>
+                <option value="2019">2019</option>
+                <option value="2020">2020</option>
+            </select>
+        </div>
+
+    </div>
+
+    <!-- ── MAP WRAPPER (for fullscreen button) ── -->
+    <div class="map-wrapper" id="mapWrapper">
         <div id="map"></div>
+        <button class="fullscreen-btn" id="fullscreenBtn" title="Toggle fullscreen map">
+            <!-- Expand icon -->
+            <svg id="fsIconExpand" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="15 3 21 3 21 9"/>
+                <polyline points="9 21 3 21 3 15"/>
+                <line x1="21" y1="3" x2="14" y2="10"/>
+                <line x1="3" y1="21" x2="10" y2="14"/>
+            </svg>
+            <!-- Collapse icon -->
+            <svg id="fsIconCollapse" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:none;">
+                <polyline points="4 14 10 14 10 20"/>
+                <polyline points="20 10 14 10 14 4"/>
+                <line x1="10" y1="14" x2="3" y2="21"/>
+                <line x1="21" y1="3" x2="14" y2="10"/>
+            </svg>
+        </button>
+    </div>
 
+    <!-- ── HINT ── -->
+    <div class="hint-banner">
+        <strong>Draw a polygon or rectangle</strong> on the map to begin satellite analysis
+    </div>
 
-        <div id = "yearSelector" >
-    <label><b>Before year</b></label>
-    <select id = beforeYear>
+    <!-- ── TUTORIAL / INTRO (hidden after first analysis) ── -->
+    <section class="tutorial-section" id="tutorialSection">
 
-        <option value = "2013">2013</option>
-        <option value = "2014" selected>2014</option>
-        <option value = "2015">2015</option>
-        <option value = "2016">2016</option>
-        <option value = "2017">2017</option>
-        <option value = "2018">2018</option>
-        <option value = "2019">2019</option>
-        <option value = "2020">2020</option>
-    </select>
+        <!-- Two-column layout: left = content, right = globe -->
+        <div class="tutorial-layout">
 
-</div>
-        <!-- Comparison Section -->
-<div id="comparison-container" style="display: none; margin-top: 20px; text-align: center;">
-    <h3>Satellite Image Comparison</h3>
-    <div style="display: flex; justify-content: center; gap: 20px;">
-        <div>
-            <p><strong>Historical (Before)</strong></p>
-            <img id="before-img">
+            <!-- LEFT: existing content -->
+            <div class="tutorial-content-col">
+
+                <div class="tutorial-header">
+                    <span class="tutorial-badge">How it works</span>
+                    <h2 class="tutorial-title">Monitor the Earth, One Region at a Time</h2>
+                    <p class="tutorial-subtitle">
+                        Environmental Monitor / AI uses satellite imagery and artificial intelligence to detect
+                        and measure environmental change — from forest loss to urban sprawl — across the Philippines and beyond.
+                    </p>
+                </div>
+
+                <div class="tutorial-steps">
+
+                    <div class="tutorial-step">
+                        <div class="step-icon">
+                            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                        </div>
+                        <div class="step-content">
+                            <h3>1. Choose a Country &amp; Year</h3>
+                            <p>Select a country and pick a historical baseline year — as far back as 2013.</p>
+                        </div>
+                    </div>
+
+                    <div class="tutorial-step">
+                        <div class="step-icon">
+                            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+                        </div>
+                        <div class="step-content">
+                            <h3>2. Draw on the Map</h3>
+                            <p>Use the polygon or rectangle tool to outline any region — a forest, a city, a coastline, or a farm.</p>
+                        </div>
+                    </div>
+
+                    <div class="tutorial-step">
+                        <div class="step-icon">
+                            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+                        </div>
+                        <div class="step-content">
+                            <h3>3. Compare Satellite Images</h3>
+                            <p>A historical snapshot is retrieved and placed side-by-side with today's imagery for direct visual comparison.</p>
+                        </div>
+                    </div>
+
+                    <div class="tutorial-step">
+                        <div class="step-icon">
+                            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                        </div>
+                        <div class="step-content">
+                            <h3>4. Read the AI Analysis</h3>
+                            <p>Our AI model estimates forest coverage change, population shifts, and environmental degradation expressed as percentages and interactive charts.</p>
+                        </div>
+                    </div>
+
+                </div>
+
+                <div class="tutorial-mission">
+                    <div class="mission-icon">🌱</div>
+                    <div class="mission-text">
+                        <h3>Our Mission</h3>
+                        <p>
+                            Deforestation, urbanization, and climate change are quietly reshaping our landscapes.
+                            This tool was built to make environmental monitoring <em>accessible to everyone</em> —
+                            students, researchers, local governments, and concerned citizens alike.
+                            By combining freely available satellite data with AI analysis, we hope to turn
+                            passive observation into informed action.
+                        </p>
+                    </div>
+                </div>
+
+            </div><!-- /tutorial-content-col -->
+
+            <!-- RIGHT: interactive globe -->
+            <div class="tutorial-globe-col">
+                <div class="globe-card">
+                    <span class="globe-card-corner globe-card-corner--tl"></span>
+                    <span class="globe-card-corner globe-card-corner--tr"></span>
+                    <span class="globe-card-corner globe-card-corner--bl"></span>
+                    <span class="globe-card-corner globe-card-corner--br"></span>
+                    <div class="globe-card-header">
+                        <span class="globe-badge">Live Preview</span>
+                        <p class="globe-hint">Drag to rotate &nbsp;·&nbsp; Scroll to zoom</p>
+                    </div>
+                    <div class="globe-canvas-wrapper">
+                        <canvas id="globeCanvas"></canvas>
+                    </div>
+                    <div class="globe-stats">
+                        <div class="globe-stat">
+                            <span class="globe-stat-value" id="globeLat">12.8°N</span>
+                            <span class="globe-stat-label">Latitude</span>
+                        </div>
+                        <div class="globe-stat-divider"></div>
+                        <div class="globe-stat">
+                            <span class="globe-stat-value" id="globeLng">122.5°E</span>
+                            <span class="globe-stat-label">Longitude</span>
+                        </div>
+                        <div class="globe-stat-divider"></div>
+                        <div class="globe-stat">
+                            <span class="globe-stat-value" id="globeZoom">1.0×</span>
+                            <span class="globe-stat-label">Zoom</span>
+                        </div>
+                    </div>
+                </div>
+            </div><!-- /tutorial-globe-col -->
+
+        </div><!-- /tutorial-layout -->
+
+    </section>
+
+    <!-- Three.js for globe -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+    (function () {
+        const canvas = document.getElementById('globeCanvas');
+        if (!canvas) return;
+
+        // ── Renderer ──
+        const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.setClearColor(0x000000, 0); // fully transparent
+
+        // ── Scene & Camera ──
+        const scene  = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
+        camera.position.set(0, 0, 2.8);
+
+        // ── Lighting — natural daylight ──
+        const ambient = new THREE.AmbientLight(0x1a2e20, 0.6);
+        scene.add(ambient);
+        const sun = new THREE.DirectionalLight(0xfff5e0, 1.1);  // warm sunlight
+        sun.position.set(5, 3, 5);
+        scene.add(sun);
+        const rimLight = new THREE.DirectionalLight(0x4466aa, 0.4);  // cool blue shadow side
+        rimLight.position.set(-4, -2, -4);
+        scene.add(rimLight);
+        const topLight = new THREE.DirectionalLight(0xb0ccff, 0.25);  // soft sky fill
+        topLight.position.set(0, 6, 0);
+        scene.add(topLight);
+
+        // ── Globe ──
+        const geo = new THREE.SphereGeometry(1, 64, 64);
+
+        // Load real Earth texture from NASA/public CDN
+        // Uses a tinted canvas overlay to keep the futuristic holographic look
+        const loader = new THREE.TextureLoader();
+        loader.crossOrigin = 'anonymous';
+
+        // We'll build the globe after texture loads (or use fallback)
+        let globe, mat;
+
+        function buildGlobe(earthTex) {
+            // If we have a real texture, tint it with a holographic overlay via canvas
+            let finalTex = earthTex;
+
+            if (earthTex) {
+                // Draw real map + holographic tint overlay on a canvas
+                const img = earthTex.image;
+                const tc  = document.createElement('canvas');
+                tc.width  = img.naturalWidth  || img.width  || 2048;
+                tc.height = img.naturalHeight || img.height || 1024;
+                const cx = tc.getContext('2d');
+
+                // Draw the real earth photo
+                cx.drawImage(img, 0, 0, tc.width, tc.height);
+
+                // Natural tint overlay — very subtle warm clarity
+                cx.globalCompositeOperation = 'screen';
+                cx.fillStyle = 'rgba(20, 30, 15, 0.08)';
+                cx.fillRect(0, 0, tc.width, tc.height);
+                cx.globalCompositeOperation = 'source-over';
+
+                // Grid lines (lat/lon) — soft, low-contrast
+                cx.strokeStyle = 'rgba(255, 255, 255, 0.10)';
+                cx.lineWidth   = Math.max(1, tc.width / 1024);
+                for (let i = 0; i <= 12; i++) {
+                    const x = (i / 12) * tc.width;
+                    cx.beginPath(); cx.moveTo(x, 0); cx.lineTo(x, tc.height); cx.stroke();
+                }
+                for (let j = 0; j <= 6; j++) {
+                    const y = (j / 6) * tc.height;
+                    cx.beginPath(); cx.moveTo(0, y); cx.lineTo(tc.width, y); cx.stroke();
+                }
+
+                // Philippines highlight dot — bright gold glow
+                const phX = 0.784 * tc.width;
+                const phY = 0.445 * tc.height;
+                const phGlow = cx.createRadialGradient(phX, phY, 0, phX, phY, tc.width * 0.018);
+                phGlow.addColorStop(0, 'rgba(255, 220, 60, 0.85)');
+                phGlow.addColorStop(1, 'rgba(255, 220, 60, 0)');
+                cx.beginPath();
+                cx.arc(phX, phY, tc.width * 0.018, 0, Math.PI * 2);
+                cx.fillStyle = phGlow;
+                cx.fill();
+                cx.beginPath();
+                cx.arc(phX, phY, tc.width * 0.005, 0, Math.PI * 2);
+                cx.fillStyle = '#ffe050';
+                cx.fill();
+                cx.strokeStyle = 'rgba(255,255,255,0.9)';
+                cx.lineWidth = Math.max(1.5, tc.width / 700);
+                cx.stroke();
+
+                finalTex = new THREE.CanvasTexture(tc);
+            } else {
+                // Fallback: dark ocean procedural if texture failed to load
+                const tc  = document.createElement('canvas');
+                tc.width  = 1024; tc.height = 512;
+                const cx  = tc.getContext('2d');
+                const og  = cx.createLinearGradient(0, 0, 0, tc.height);
+                og.addColorStop(0,   '#0a1a2e');
+                og.addColorStop(0.5, '#0d2240');
+                og.addColorStop(1,   '#0a1a2e');
+                cx.fillStyle = og; cx.fillRect(0, 0, tc.width, tc.height);
+                cx.strokeStyle = 'rgba(255,255,255,0.10)'; cx.lineWidth = 1.2;
+                for (let i = 0; i <= 12; i++) { const x=(i/12)*tc.width; cx.beginPath(); cx.moveTo(x,0); cx.lineTo(x,tc.height); cx.stroke(); }
+                for (let j = 0; j <= 6;  j++) { const y=(j/6)*tc.height;  cx.beginPath(); cx.moveTo(0,y); cx.lineTo(tc.width,y);  cx.stroke(); }
+                finalTex = new THREE.CanvasTexture(tc);
+            }
+
+            mat = new THREE.MeshPhongMaterial({
+                map:               finalTex,
+                specular:          new THREE.Color(0x446688),  // natural sea specular
+                shininess:         35,
+                transparent:       true,
+                opacity:           0.96,
+                emissive:          new THREE.Color(0x060e08),
+                emissiveIntensity: 0.04,
+            });
+            globe = new THREE.Mesh(geo, mat);
+            scene.add(globe);
+
+            // Atmosphere glow — natural blue sky haze
+            const atmGeo = new THREE.SphereGeometry(1.04, 64, 64);
+            const atmMat = new THREE.MeshPhongMaterial({
+                color:             0x5599cc,
+                transparent:       true,
+                opacity:           0.08,
+                side:              THREE.FrontSide,
+                emissive:          new THREE.Color(0x224466),
+                emissiveIntensity: 0.2,
+            });
+            atmosphere = new THREE.Mesh(atmGeo, atmMat);
+            scene.add(atmosphere);
+
+            // Outer rim glow — deep space blue
+            const rimGeo = new THREE.SphereGeometry(1.07, 64, 64);
+            const rimMat = new THREE.MeshPhongMaterial({
+                color:       0x1a3a6a,
+                transparent: true,
+                opacity:     0.05,
+                side:        THREE.BackSide,
+            });
+            scene.add(new THREE.Mesh(rimGeo, rimMat));
+        }
+
+        // Try loading real NASA Blue Marble texture
+        loader.load(
+            'https://cdn.jsdelivr.net/gh/turban/Leaflet.Graticule@master/examples/earth.jpg',
+            tex => buildGlobe(tex),
+            undefined,
+            () => {
+                // First fallback
+                loader.load(
+                    'https://raw.githubusercontent.com/mrdoob/three.js/dev/examples/textures/planets/earth_atmos_2048.jpg',
+                    tex => buildGlobe(tex),
+                    undefined,
+                    () => buildGlobe(null)
+                );
+            }
+        );
+
+        let atmosphere; // declared here so animation loop can reference it
+
+        // Stars — brighter
+        const starGeo = new THREE.BufferGeometry();
+        const starPositions = [];
+        for (let i = 0; i < 1500; i++) {
+            const theta = Math.random() * Math.PI * 2;
+            const phi   = Math.acos(2 * Math.random() - 1);
+            const r     = 8 + Math.random() * 4;
+            starPositions.push(
+                r * Math.sin(phi) * Math.cos(theta),
+                r * Math.sin(phi) * Math.sin(theta),
+                r * Math.cos(phi)
+            );
+        }
+        starGeo.setAttribute('position', new THREE.Float32BufferAttribute(starPositions, 3));
+        const starMat  = new THREE.PointsMaterial({ color: 0xddeeff, size: 0.020, transparent: true, opacity: 0.70 });
+        const stars    = new THREE.Points(starGeo, starMat);
+        scene.add(stars);
+
+        // ── Interaction ──
+        let isDragging = false, prevX = 0, prevY = 0;
+        let rotX = 0, rotY = 0.36; // start centered near Philippines
+        let targetRotX = rotX, targetRotY = rotY;
+        let zoom = 2.8, targetZoom = zoom;
+
+        // Clamp rotation
+        const clampX = v => Math.max(-Math.PI / 2.2, Math.min(Math.PI / 2.2, v));
+
+        canvas.addEventListener('mousedown', e => {
+            isDragging = true;
+            prevX = e.clientX; prevY = e.clientY;
+        });
+        window.addEventListener('mouseup', () => { isDragging = false; });
+        window.addEventListener('mousemove', e => {
+            if (!isDragging) return;
+            const dx = e.clientX - prevX;
+            const dy = e.clientY - prevY;
+            targetRotY += dx * 0.008;
+            targetRotX  = clampX(targetRotX + dy * 0.008);
+            prevX = e.clientX; prevY = e.clientY;
+            updateStats();
+        });
+
+        // Touch
+        let lastTouchX = 0, lastTouchY = 0;
+        canvas.addEventListener('touchstart', e => {
+            lastTouchX = e.touches[0].clientX;
+            lastTouchY = e.touches[0].clientY;
+        }, { passive: true });
+        canvas.addEventListener('touchmove', e => {
+            const dx = e.touches[0].clientX - lastTouchX;
+            const dy = e.touches[0].clientY - lastTouchY;
+            targetRotY += dx * 0.008;
+            targetRotX  = clampX(targetRotX + dy * 0.008);
+            lastTouchX  = e.touches[0].clientX;
+            lastTouchY  = e.touches[0].clientY;
+            updateStats();
+            e.preventDefault();
+        }, { passive: false });
+
+        canvas.addEventListener('wheel', e => {
+            targetZoom = Math.max(1.6, Math.min(5.0, targetZoom + e.deltaY * 0.005));
+            e.preventDefault();
+        }, { passive: false });
+
+        // ── Stats display ──
+        function updateStats() {
+            // Map rotation angles to lat/lng
+            const lat = -(targetRotX * (180 / Math.PI)).toFixed(1);
+            const lng = ((targetRotY * (180 / Math.PI)) % 360).toFixed(1);
+            const latStr = lat >= 0 ? lat + '°N' : Math.abs(lat) + '°S';
+            const lngStr = lng >= 0 ? lng + '°E' : Math.abs(lng) + '°W';
+            document.getElementById('globeLat').textContent  = latStr;
+            document.getElementById('globeLng').textContent  = lngStr;
+            document.getElementById('globeZoom').textContent = (2.8 / targetZoom).toFixed(1) + '×';
+        }
+
+        // ── Resize ──
+        function resize() {
+            const size = canvas.parentElement.clientWidth;
+            const w    = Math.min(size, 420);
+            renderer.setSize(w, w);
+            camera.aspect = 1;
+            camera.updateProjectionMatrix();
+        }
+        resize();
+        window.addEventListener('resize', resize);
+
+        // ── Auto-rotate when idle ──
+        let lastInteract = Date.now();
+        canvas.addEventListener('mousedown',  () => { lastInteract = Date.now(); });
+        canvas.addEventListener('touchstart', () => { lastInteract = Date.now(); });
+        canvas.addEventListener('wheel',      () => { lastInteract = Date.now(); });
+
+        // ── Animation loop ──
+        function animate() {
+            requestAnimationFrame(animate);
+
+            // Auto-rotate when idle
+            if (Date.now() - lastInteract > 2000) {
+                targetRotY += 0.002;
+            }
+
+            // Lerp
+            rotX = rotX + (targetRotX - rotX) * 0.08;
+            rotY = rotY + (targetRotY - rotY) * 0.08;
+            zoom = zoom + (targetZoom - zoom) * 0.08;
+
+            if (globe)      { globe.rotation.x = rotX; globe.rotation.y = rotY; }
+            if (atmosphere) { atmosphere.rotation.x = rotX; atmosphere.rotation.y = rotY; }
+            camera.position.z = zoom;
+
+            renderer.render(scene, camera);
+        }
+        animate();
+    })();
+    </script>
+
+    <!-- ── COMPARISON SECTION ── -->
+    <div id="comparison-container" style="display: none; margin-top: 20px; text-align: center;">
+        <h3>Satellite Image Comparison</h3>
+        <p class="comparison-label">Comparing historical vs. current satellite imagery</p>
+
+        <div class="comparison-images">
+            <div class="img-card">
+                <div class="img-card-label before">
+                    <span class="dot"></span> Historical (Before)
+                </div>
+                <img id="before-img" alt="Historical satellite image">
+            </div>
+            <div class="img-card">
+                <div class="img-card-label after">
+                    <span class="dot"></span> Current (After)
+                </div>
+                <img id="after-img" alt="Current satellite image">
+            </div>
         </div>
-        <div>
-            <p><strong>Current (After)</strong></p>
-            <img id="after-img" >
+    </div>
+
+    <!-- ── CHARTS ── -->
+    <div class="charts-section">
+
+        <!-- Top row: Forest + Population side by side -->
+        <div class="charts-grid">
+            <div class="chart-card">
+                <h2>Forest Coverage</h2>
+                <canvas id="forestChart"></canvas>
+            </div>
+            <div class="chart-card">
+                <h2>Population</h2>
+                <canvas id="populationChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Bottom row: wide change chart -->
+        <div class="chart-card chart-card--wide">
+            <h2>Environmental Change</h2>
+            <canvas id="changeChart"></canvas>
+        </div>
+
+    </div>
+
+    <!-- ── LOADING SCREEN (unchanged) ── -->
+    <div id="loading-screen">
+        <p class="small"><span id="loading-lat-lng">-</span></p>
+        <div class="loading-title">
+            Loading Analysis...
+        </div>
+        <div class="small">
+            Processing satellite data &amp; charts
         </div>
     </div>
-</div>
-
-<!-- FOREST COVERAGE -->
-<div style="width: 600px; margin-bottom: 40px;">
-    <h2>Forest Coverage Comparison</h2>
-    <canvas id="forestChart"></canvas>
-</div>
-
-<!-- POPULATION -->
-<div style="width: 600px; margin-bottom: 40px;">
-    <h2>Population Comparison</h2>
-    <canvas id="populationChart"></canvas>
-</div>
-
-<!-- CHANGE DETECTED -->
-<div style="width: 600px; margin-bottom: 40px;">
-    <h2>Environmental Change</h2>
-    <canvas id="changeChart"></canvas>
-</div>
-
-<div id="loading-screen">
-
-
-     <p class = "small"><span id="loading-lat-lng">-</span></p>
-    <div class="loading-title">
-        Loading Analysis...
-    </div>
-
-    <div class="small">
-        Processing satellite data & charts
-    </div>
-
-    <!-- <div class = "small" id="loading-location" style="margin-top:15px;">
-
-        <p><b>City:</b> <span id="loading-city">-</span></p>
-
-        <p><b>Region:</b> <span id="loading-region">-</span></p>
-
-        <p><b>Country:</b> <span id="loading-country">-</span></p>
-
-       
-
-
-    </div> -->
-
-</div>
-
-
-</div>
-
-
 
 
     <script>
-        const countries = {{ countries | tojson }};
-
-        const countryBounds = {};
-
-        countries.forEach(c => {
-            countryBounds[c.country_code] = c.bounds;
+        // ── Sync visible year picker → hidden #beforeYear ──
+        document.getElementById('beforeYearVisible').addEventListener('change', function () {
+            document.getElementById('beforeYear').value = this.value;
         });
 
+        const countries = {{ countries | tojson }};
+        const countryBounds = {};
+        countries.forEach(c => { countryBounds[c.country_code] = c.bounds; });
         console.log(countryBounds);
 
-        
-
-        let forestChart = null;
+        let forestChart    = null;
         let populationChart = null;
-        let changeChart = null;
-        let mapLoaded = false;
+        let changeChart    = null;
+        let mapLoaded      = false;
+
         function showLoading() {
             const loader = document.getElementById("loading-screen");
-
-            loader.style.opacity = "1";
+            loader.style.opacity    = "1";
             loader.style.visibility = "visible";
         }
 
         function hideLoading() {
             const loader = document.getElementById("loading-screen");
-
-            loader.style.opacity = "0";
+            loader.style.opacity    = "0";
             loader.style.visibility = "hidden";
         }
+
+        // ── FULLSCREEN MAP ──────────────────────────────
+        const mapWrapper    = document.getElementById('mapWrapper');
+        const fullscreenBtn = document.getElementById('fullscreenBtn');
+        const fsExpand      = document.getElementById('fsIconExpand');
+        const fsCollapse    = document.getElementById('fsIconCollapse');
+        let isFullscreen    = false;
+
+        fullscreenBtn.addEventListener('click', function () {
+            isFullscreen = !isFullscreen;
+            if (isFullscreen) {
+                mapWrapper.classList.add('map-fullscreen');
+                fsExpand.style.display   = 'none';
+                fsCollapse.style.display = 'block';
+                document.body.style.overflow = 'hidden';
+            } else {
+                mapWrapper.classList.remove('map-fullscreen');
+                fsExpand.style.display   = 'block';
+                fsCollapse.style.display = 'none';
+                document.body.style.overflow = '';
+            }
+            setTimeout(() => map.invalidateSize(), 300);
+        });
+
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape' && isFullscreen) fullscreenBtn.click();
+        });
+
+        // ── MAP SETUP ───────────────────────────────────
         var philippinesBounds = [
-            [4.5, 116.0],  
-            [21.5, 127.0]   
+            [4.5, 116.0],
+            [21.5, 127.0]
         ];
+
         var map = L.map('map', {
             center: [12.8797, 121.7740],
-            zoom: 6,
+            zoom: 4,
             minZoom: 4,
             maxZoom: 12,
             maxBounds: philippinesBounds,
             maxBoundsViscosity: 1.0
         });
 
+        function focusCountry(code) {
+            const bounds = countryBounds[code];
+            if (!bounds) return;
+            const lat = (bounds[0][0] + bounds[1][0]) / 2;
+            const lng = (bounds[0][1] + bounds[1][1]) / 2;
+            map.flyTo([lat, lng], map.getZoom());
+            map.setMaxBounds(bounds);
+        }
 
-    function focusCountry(code) {
-
-        const bounds = countryBounds[code];
-
-        if (!bounds) return;
-
-        const lat = (bounds[0][0] + bounds[1][0]) / 2;
-        const lng = (bounds[0][1] + bounds[1][1]) / 2;
-
-        map.flyTo([lat, lng], map.getZoom());
-        map.setMaxBounds(bounds);
-    }
         document.getElementById("countrySelect").addEventListener("change", function () {
             focusCountry(this.value);
         });
+
         L.tileLayer(
-        'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-        {
-            attribution: 'Tiles &copy; Esri'
-        }
+            'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+            { attribution: 'Tiles &copy; Esri' }
         ).addTo(map);
-        map.whenReady(() => {
 
-            console.log("Map ready");
-
-        });
+        map.whenReady(() => { console.log("Map ready"); });
 
         var drawnItems = new L.FeatureGroup();
-
         map.addLayer(drawnItems);
 
         var drawControl = new L.Control.Draw({
-
-            draw: {
-                polygon: true,
-                rectangle: true
-            },
-
-            edit: {featureGroup: drawnItems}
+            draw: { polygon: true, rectangle: true },
+            edit: { featureGroup: drawnItems }
         });
-
         map.addControl(drawControl);
-map.on(L.Draw.Event.CREATED, function (event) {
 
-    showLoading();
-
-    requestAnimationFrame(() => {
-
-        requestAnimationFrame(() => {
-
-            processImage(event);
-
+        map.on(L.Draw.Event.CREATED, function (event) {
+            showLoading();
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => { processImage(event); });
+            });
         });
 
-    });
-
-});
-
-
-        function processImage(event){
-                    
-            var layer = event.layer;
+        function processImage(event) {
+            var layer  = event.layer;
             drawnItems.addLayer(layer);
-            
+
             var bounds = layer.getBounds();
             var center = bounds.getCenter();
 
-            // const areaMeters = L.GeometryUtil.geodesicArea(layer.getLatLngs()[0]);
-
-            // const areaKm = areaMeters / 1000000;
-
-            // console.log("Area" + areaKm.toFixed(2) + " km^2")
-
-         
-            document.getElementById("loading-lat-lng").innerText = 
+            document.getElementById("loading-lat-lng").innerText =
                 `${center.lat.toFixed(4)}, ${center.lng.toFixed(4)}`;
-            
 
-            var bounds = layer.getBounds();
             var latlngs = layer.getLatLngs()[0];
-            var coords = latlngs.map(function(ll) {
-                return [ll.lng, ll.lat];
-            });
+            var coords  = latlngs.map(function(ll) { return [ll.lng, ll.lat]; });
             coords.push(coords[0]);
-             
-
-
-      
 
             leafletImage(map, function(err, canvas) {
-        var bounds = layer.getBounds();
-        var center = bounds.getCenter();
+                var bounds      = layer.getBounds();
+                var center      = bounds.getCenter();
+                var topLeft     = map.latLngToContainerPoint(bounds.getNorthWest());
+                var bottomRight = map.latLngToContainerPoint(bounds.getSouthEast());
+                var width       = bottomRight.x - topLeft.x;
+                var height      = bottomRight.y - topLeft.y;
 
-        var topLeft = map.latLngToContainerPoint(bounds.getNorthWest());
-        var bottomRight = map.latLngToContainerPoint(bounds.getSouthEast());
+                var croppedCanvas = document.createElement('canvas');
+                var ctx = croppedCanvas.getContext('2d');
+                croppedCanvas.width  = width;
+                croppedCanvas.height = height;
+                ctx.drawImage(canvas, topLeft.x, topLeft.y, width, height, 0, 0, width, height);
 
-        var width = bottomRight.x - topLeft.x;
-        var height = bottomRight.y - topLeft.y;
+                var imageData = croppedCanvas.toDataURL("image/png", 0.7);
+                document.getElementById('after-img').src = imageData;
 
-        var croppedCanvas = document.createElement('canvas');
-        var ctx = croppedCanvas.getContext('2d');
-
-        croppedCanvas.width = width;
-        croppedCanvas.height = height;
-
-        ctx.drawImage(
-            canvas,
-            topLeft.x,
-            topLeft.y,
-            width,
-            height,
-            0,
-            0,
-            width,
-            height
-        );
-
-        var imageData = croppedCanvas.toDataURL("image/png", 0.7);
-
-        document.getElementById('after-img').src = imageData;
-        let beforeYear = document.getElementById("beforeYear").value;
+                let beforeYear = document.getElementById("beforeYear").value;
 
                 fetch("/before_after", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ 
+                    body: JSON.stringify({
                         image: imageData,
                         coords: coords,
                         lat: center.lat,
@@ -297,186 +697,168 @@ map.on(L.Draw.Event.CREATED, function (event) {
                 })
                 .then(response => response.json())
                 .then(data => {
-       
 
                     if (data.before_image && data.before_image !== "data:image/png;base64,") {
-                        const beforeImgElement = document.getElementById("before-img")
-                        const afterImgElement = document.getElementById('after-img');
-                        
+                        const beforeImgElement = document.getElementById("before-img");
+                        const afterImgElement  = document.getElementById('after-img');
                         const area_km2 = data.area_km2;
-                        console.log("Area km2: " + area_km2)
-                        console.log("City: " + data.city)
-                        console.log("Region: " + data.region)
-                        beforeImgElement.src = data.before_image;
-                        
 
+                        console.log("Area km2: " + area_km2);
+                        console.log("City: " + data.city);
+                        console.log("Region: " + data.region);
+
+                        beforeImgElement.src = data.before_image;
                         document.getElementById('comparison-container').style.display = "block";
 
-                        fetch("/analyze/before_after_image",{
+                        // Fade out tutorial section
+                        const tutorial = document.getElementById('tutorialSection');
+                        if (tutorial && tutorial.style.display !== 'none') {
+                            tutorial.style.transition = 'opacity 0.5s ease';
+                            tutorial.style.opacity    = '0';
+                            setTimeout(() => { tutorial.style.display = 'none'; }, 500);
+                        }
+
+                        fetch("/analyze/before_after_image", {
                             method: "POST",
-                            headers: {"Content-Type": "application/json"},
+                            headers: { "Content-Type": "application/json" },
                             body: JSON.stringify({
-                                after_image: afterImgElement.src,
+                                after_image:  afterImgElement.src,
                                 before_image: data.before_image,
-                                area_km2: area_km2
+                                area_km2:     area_km2
                             })
-                        }).then(res => res.json())
+                        })
+                        .then(res => res.json())
                         .then(stats => {
                             console.log("Historical Data:", stats.before_percent + "%");
                             console.log("Current Data:", stats.after_percent + "%");
-                            console.log("Change Detected: ", stats.change + "%")
-                            console.log("Before Urbanicity:", stats.before_urbanicity + "Population: ", stats.before_est_population)
-                            console.log("After Urbanicity:", stats.after_urbanicity + "Population: ", stats.after_est_population)
-                            // alert("Change detected: " + stats.change + "%");
-                        // ======================
-// FOREST COVERAGE CHART
-// ======================
+                            console.log("Change Detected: ", stats.change + "%");
+                            console.log("Before Urbanicity:", stats.before_urbanicity + "Population: ", stats.before_est_population);
+                            console.log("After Urbanicity:", stats.after_urbanicity + "Population: ", stats.after_est_population);
 
-if (forestChart) {
-    forestChart.destroy();
-}
+                            if (forestChart)     forestChart.destroy();
+                            if (populationChart) populationChart.destroy();
+                            if (changeChart)     changeChart.destroy();
 
-if (populationChart) {
-    populationChart.destroy();
-}
+                            const selectedBeforeYear = document.getElementById("beforeYear").value;
 
-if (changeChart) {
-    changeChart.destroy();
-}
-// Get the year from the dropdown for the label
-const selectedBeforeYear = document.getElementById("beforeYear").value;
+                            const pointStyle = {
+                                pointRadius: 8,
+                                pointHoverRadius: 10,
+                                pointBackgroundColor: '#fff',
+                                pointBorderWidth: 3,
+                            };
 
-// Common Point Styling to keep things consistent
-const pointStyle = {
-    pointRadius: 8,              // Size of the circle
-    pointHoverRadius: 10,        // Size when hovering
-    pointBackgroundColor: '#fff', // White center
-    pointBorderWidth: 3,         // Thick border
-};
+                            // FOREST COVERAGE CHART
+                            if (forestChart) forestChart.destroy();
+                            forestChart = new Chart(document.getElementById('forestChart'), {
+                                type: 'line',
+                                data: {
+                                    labels: [selectedBeforeYear, '2026'],
+                                    datasets: [
+                                        {
+                                            label: 'Historical',
+                                            data: [stats.before_percent, null],
+                                            borderColor: 'rgba(75, 192, 192, 1)',
+                                            ...pointStyle,
+                                            pointBorderColor: 'rgba(75, 192, 192, 1)',
+                                        },
+                                        {
+                                            label: 'Current',
+                                            data: [stats.before_percent, stats.after_percent],
+                                            borderColor: 'rgba(34, 139, 34, 1)',
+                                            backgroundColor: 'rgba(34, 139, 34, 0.1)',
+                                            fill: true,
+                                            tension: 0,
+                                            borderWidth: 4,
+                                            ...pointStyle,
+                                            pointBorderColor: 'rgba(34, 139, 34, 1)',
+                                        }
+                                    ]
+                                },
+                                options: {
+                                    responsive: true,
+                                    plugins: {
+                                        title: { display: true, text: 'Forest Vegetation Loss/Gain' },
+                                        legend: { position: 'bottom' }
+                                    }
+                                }
+                            });
 
-// ======================
-// FOREST COVERAGE CHART
-// ======================
-if (forestChart) forestChart.destroy();
-forestChart = new Chart(document.getElementById('forestChart'), {
-    type: 'line',
-    data: {
-        labels: [selectedBeforeYear, '2026'],
-        datasets: [
-            {
-                label: 'Historical',
-                data: [stats.before_percent, null],
-                borderColor: 'rgba(75, 192, 192, 1)',
-                ...pointStyle,
-                pointBorderColor: 'rgba(75, 192, 192, 1)',
-            },
-            {
-                label: 'Current',
-                data: [stats.before_percent, stats.after_percent],
-                borderColor: 'rgba(34, 139, 34, 1)',
-                backgroundColor: 'rgba(34, 139, 34, 0.1)',
-                fill: true,
-                tension: 0, // <--- FORCES STRAIGHT LINES
-                borderWidth: 4,
-                ...pointStyle,
-                pointBorderColor: 'rgba(34, 139, 34, 1)',
-            }
-        ]
-    },
-    options: {
-        responsive: true,
-        plugins: { 
-            title: { display: true, text: 'Forest Vegetation Loss/Gain' },
-            legend: { position: 'bottom' }
-        }
-    }
-});
+                            // POPULATION CHART
+                            if (populationChart) populationChart.destroy();
+                            populationChart = new Chart(document.getElementById('populationChart'), {
+                                type: 'bar',
+                                data: {
+                                    labels: ['Comparison'],
+                                    datasets: [
+                                        {
+                                            label: `Population (${selectedBeforeYear})`,
+                                            data: [stats.before_est_population],
+                                            backgroundColor: 'rgba(54, 162, 235, 0.7)',
+                                            borderRadius: 5
+                                        },
+                                        {
+                                            label: 'Population (2026)',
+                                            data: [stats.after_est_population],
+                                            backgroundColor: 'rgba(255, 159, 64, 0.7)',
+                                            borderRadius: 5
+                                        }
+                                    ]
+                                },
+                                options: {
+                                    responsive: true,
+                                    scales: { y: { beginAtZero: true } }
+                                }
+                            });
 
-// ======================
-// POPULATION CHART (Grouped Bar - Keeping the side-by-side design)
-// ======================
-if (populationChart) populationChart.destroy();
-populationChart = new Chart(document.getElementById('populationChart'), {
-    type: 'bar',
-    data: {
-        labels: ['Comparison'],
-        datasets: [
-            {
-                label: `Population (${selectedBeforeYear})`,
-                data: [stats.before_est_population],
-                backgroundColor: 'rgba(54, 162, 235, 0.7)',
-                borderRadius: 5 // Rounds the top of bars slightly
-            },
-            {
-                label: 'Population (2026)',
-                data: [stats.after_est_population],
-                backgroundColor: 'rgba(255, 159, 64, 0.7)',
-                borderRadius: 5
-            }
-        ]
-    },
-    options: {
-        responsive: true,
-        scales: { y: { beginAtZero: true } }
-    }
-});
+                            // CHANGE DETECTED CHART
+                            if (changeChart) changeChart.destroy();
+                            changeChart = new Chart(document.getElementById('changeChart'), {
+                                type: 'line',
+                                data: {
+                                    labels: [selectedBeforeYear, '2026'],
+                                    datasets: [
+                                        {
+                                            label: 'Baseline',
+                                            data: [0, 0],
+                                            borderColor: 'rgba(200, 200, 200, 0.5)',
+                                            borderDash: [10, 5],
+                                            pointRadius: 0
+                                        },
+                                        {
+                                            label: 'Detected Change %',
+                                            data: [0, stats.change],
+                                            borderColor: 'rgba(255, 99, 132, 1)',
+                                            backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                                            fill: true,
+                                            tension: 0,
+                                            borderWidth: 4,
+                                            ...pointStyle,
+                                            pointBorderColor: 'rgba(255, 99, 132, 1)',
+                                        }
+                                    ]
+                                },
+                                options: {
+                                    responsive: true,
+                                    plugins: { legend: { position: 'bottom' } }
+                                }
+                            });
 
-// ======================
-// CHANGE DETECTED CHART (Straight Lines + Points)
-// ======================
-if (changeChart) changeChart.destroy();
-changeChart = new Chart(document.getElementById('changeChart'), {
-    type: 'line',
-    data: {
-        labels: [selectedBeforeYear, '2026'],
-        datasets: [
-            {
-                label: 'Baseline',
-                data: [0, 0],
-                borderColor: 'rgba(200, 200, 200, 0.5)',
-                borderDash: [10, 5],
-                pointRadius: 0 // No points for the reference line
-            },
-            {
-                label: 'Detected Change %',
-                data: [0, stats.change],
-                borderColor: 'rgba(255, 99, 132, 1)',
-                backgroundColor: 'rgba(255, 99, 132, 0.2)',
-                fill: true,
-                tension: 0, // <--- FORCES STRAIGHT LINES
-                borderWidth: 4,
-                ...pointStyle,
-                pointBorderColor: 'rgba(255, 99, 132, 1)',
-            }
-        ]
-    },
-    options: {
-        responsive: true,
-        plugins: { 
-            legend: { position: 'bottom' }
-        }
-    }
-});
-
-hideLoading();
+                            hideLoading();
                         });
 
                     } else {
                         console.log("No historical image found.");
                     }
-
-                
                 })
                 .catch(error => {
                     console.error("Error:", error);
                     alert("An error occurred during analysis.");
                 });
-            }); 
+            });
         }
 
+    </script>
 
-        </script>
-
-    </body>
-
+</body>
 </html>
