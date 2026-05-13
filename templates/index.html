@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+<link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <link rel="stylesheet"
+    href="https://unpkg.com/leaflet-draw/dist/leaflet.draw.css"/>
+    <script src="https://unpkg.com/leaflet-image/leaflet-image.js"></script>
+    <script src="https://unpkg.com/leaflet-draw/dist/leaflet.draw.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="/static/style.css">
+
+
+
+</head>
+
+    <body>
+
+        <h1 id = "header">Environmental Monitor/AI</h1>
+
+<div style="margin:10px; text-align:center;">
+    <label><b>Select Country:</b></label>
+
+    <select id="countrySelect">
+        {% for country in countries %}
+            <option value="{{ country.country_code }}">
+                {{ country.country_code }}
+            </option>
+        {% endfor %}
+    </select>
+</div>
+
+        <div id="map"></div>
+
+
+        <div id = "yearSelector" >
+    <label><b>Before year</b></label>
+    <select id = beforeYear>
+
+        <option value = "2013">2013</option>
+        <option value = "2014" selected>2014</option>
+        <option value = "2015">2015</option>
+        <option value = "2016">2016</option>
+        <option value = "2017">2017</option>
+        <option value = "2018">2018</option>
+        <option value = "2019">2019</option>
+        <option value = "2020">2020</option>
+    </select>
+
+</div>
+        <!-- Comparison Section -->
+<div id="comparison-container" style="display: none; margin-top: 20px; text-align: center;">
+    <h3>Satellite Image Comparison</h3>
+    <div style="display: flex; justify-content: center; gap: 20px;">
+        <div>
+            <p><strong>Historical (Before)</strong></p>
+            <img id="before-img">
+        </div>
+        <div>
+            <p><strong>Current (After)</strong></p>
+            <img id="after-img" >
+        </div>
+    </div>
+</div>
+
+<!-- FOREST COVERAGE -->
+<div style="width: 600px; margin-bottom: 40px;">
+    <h2>Forest Coverage Comparison</h2>
+    <canvas id="forestChart"></canvas>
+</div>
+
+<!-- POPULATION -->
+<div style="width: 600px; margin-bottom: 40px;">
+    <h2>Population Comparison</h2>
+    <canvas id="populationChart"></canvas>
+</div>
+
+<!-- CHANGE DETECTED -->
+<div style="width: 600px; margin-bottom: 40px;">
+    <h2>Environmental Change</h2>
+    <canvas id="changeChart"></canvas>
+</div>
+
+<div id="loading-screen">
+
+
+     <p class = "small"><span id="loading-lat-lng">-</span></p>
+    <div class="loading-title">
+        Loading Analysis...
+    </div>
+
+    <div class="small">
+        Processing satellite data & charts
+    </div>
+
+    <!-- <div class = "small" id="loading-location" style="margin-top:15px;">
+
+        <p><b>City:</b> <span id="loading-city">-</span></p>
+
+        <p><b>Region:</b> <span id="loading-region">-</span></p>
+
+        <p><b>Country:</b> <span id="loading-country">-</span></p>
+
+       
+
+
+    </div> -->
+
+</div>
+
+
+</div>
+
+
+
+
+    <script>
+        const countries = {{ countries | tojson }};
+
+        const countryBounds = {};
+
+        countries.forEach(c => {
+            countryBounds[c.country_code] = c.bounds;
+        });
+
+        console.log(countryBounds);
+
+        
+
+        let forestChart = null;
+        let populationChart = null;
+        let changeChart = null;
+        let mapLoaded = false;
+        function showLoading() {
+            const loader = document.getElementById("loading-screen");
+
+            loader.style.opacity = "1";
+            loader.style.visibility = "visible";
+        }
+
+        function hideLoading() {
+            const loader = document.getElementById("loading-screen");
+
+            loader.style.opacity = "0";
+            loader.style.visibility = "hidden";
+        }
+        var philippinesBounds = [
+            [4.5, 116.0],  
+            [21.5, 127.0]   
+        ];
+        var map = L.map('map', {
+            center: [12.8797, 121.7740],
+            zoom: 6,
+            minZoom: 4,
+            maxZoom: 12,
+            maxBounds: philippinesBounds,
+            maxBoundsViscosity: 1.0
+        });
+
+
+    function focusCountry(code) {
+
+        const bounds = countryBounds[code];
+
+        if (!bounds) return;
+
+        const lat = (bounds[0][0] + bounds[1][0]) / 2;
+        const lng = (bounds[0][1] + bounds[1][1]) / 2;
+
+        map.flyTo([lat, lng], map.getZoom());
+        map.setMaxBounds(bounds);
+    }
+        document.getElementById("countrySelect").addEventListener("change", function () {
+            focusCountry(this.value);
+        });
+        L.tileLayer(
+        'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+        {
+            attribution: 'Tiles &copy; Esri'
+        }
+        ).addTo(map);
+        map.whenReady(() => {
+
+            console.log("Map ready");
+
+        });
+
+        var drawnItems = new L.FeatureGroup();
+
+        map.addLayer(drawnItems);
+
+        var drawControl = new L.Control.Draw({
+
+            draw: {
+                polygon: true,
+                rectangle: true
+            },
+
+            edit: {featureGroup: drawnItems}
+        });
+
+        map.addControl(drawControl);
+map.on(L.Draw.Event.CREATED, function (event) {
+
+    showLoading();
+
+    requestAnimationFrame(() => {
+
+        requestAnimationFrame(() => {
+
+            processImage(event);
+
+        });
+
+    });
+
+});
+
+
+        function processImage(event){
+                    
+            var layer = event.layer;
+            drawnItems.addLayer(layer);
+            
+            var bounds = layer.getBounds();
+            var center = bounds.getCenter();
+
+            // const areaMeters = L.GeometryUtil.geodesicArea(layer.getLatLngs()[0]);
+
+            // const areaKm = areaMeters / 1000000;
+
+            // console.log("Area" + areaKm.toFixed(2) + " km^2")
+
+         
+            document.getElementById("loading-lat-lng").innerText = 
+                `${center.lat.toFixed(4)}, ${center.lng.toFixed(4)}`;
+            
+
+            var bounds = layer.getBounds();
+            var latlngs = layer.getLatLngs()[0];
+            var coords = latlngs.map(function(ll) {
+                return [ll.lng, ll.lat];
+            });
+            coords.push(coords[0]);
+             
+
+
+      
+
+            leafletImage(map, function(err, canvas) {
+        var bounds = layer.getBounds();
+        var center = bounds.getCenter();
+
+        var topLeft = map.latLngToContainerPoint(bounds.getNorthWest());
+        var bottomRight = map.latLngToContainerPoint(bounds.getSouthEast());
+
+        var width = bottomRight.x - topLeft.x;
+        var height = bottomRight.y - topLeft.y;
+
+        var croppedCanvas = document.createElement('canvas');
+        var ctx = croppedCanvas.getContext('2d');
+
+        croppedCanvas.width = width;
+        croppedCanvas.height = height;
+
+        ctx.drawImage(
+            canvas,
+            topLeft.x,
+            topLeft.y,
+            width,
+            height,
+            0,
+            0,
+            width,
+            height
+        );
+
+        var imageData = croppedCanvas.toDataURL("image/png", 0.7);
+
+        document.getElementById('after-img').src = imageData;
+        let beforeYear = document.getElementById("beforeYear").value;
+
+                fetch("/before_after", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ 
+                        image: imageData,
+                        coords: coords,
+                        lat: center.lat,
+                        lng: center.lng,
+                        before_year: beforeYear
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+       
+
+                    if (data.before_image && data.before_image !== "data:image/png;base64,") {
+                        const beforeImgElement = document.getElementById("before-img")
+                        const afterImgElement = document.getElementById('after-img');
+                        
+                        const area_km2 = data.area_km2;
+                        console.log("Area km2: " + area_km2)
+                        console.log("City: " + data.city)
+                        console.log("Region: " + data.region)
+                        beforeImgElement.src = data.before_image;
+                        
+
+                        document.getElementById('comparison-container').style.display = "block";
+
+                        fetch("/analyze/before_after_image",{
+                            method: "POST",
+                            headers: {"Content-Type": "application/json"},
+                            body: JSON.stringify({
+                                after_image: afterImgElement.src,
+                                before_image: data.before_image,
+                                area_km2: area_km2
+                            })
+                        }).then(res => res.json())
+                        .then(stats => {
+                            console.log("Historical Data:", stats.before_percent + "%");
+                            console.log("Current Data:", stats.after_percent + "%");
+                            console.log("Change Detected: ", stats.change + "%")
+                            console.log("Before Urbanicity:", stats.before_urbanicity + "Population: ", stats.before_est_population)
+                            console.log("After Urbanicity:", stats.after_urbanicity + "Population: ", stats.after_est_population)
+                            // alert("Change detected: " + stats.change + "%");
+                        // ======================
+// FOREST COVERAGE CHART
+// ======================
+
+if (forestChart) {
+    forestChart.destroy();
+}
+
+if (populationChart) {
+    populationChart.destroy();
+}
+
+if (changeChart) {
+    changeChart.destroy();
+}
+// Get the year from the dropdown for the label
+const selectedBeforeYear = document.getElementById("beforeYear").value;
+
+// Common Point Styling to keep things consistent
+const pointStyle = {
+    pointRadius: 8,              // Size of the circle
+    pointHoverRadius: 10,        // Size when hovering
+    pointBackgroundColor: '#fff', // White center
+    pointBorderWidth: 3,         // Thick border
+};
+
+// ======================
+// FOREST COVERAGE CHART
+// ======================
+if (forestChart) forestChart.destroy();
+forestChart = new Chart(document.getElementById('forestChart'), {
+    type: 'line',
+    data: {
+        labels: [selectedBeforeYear, '2026'],
+        datasets: [
+            {
+                label: 'Historical',
+                data: [stats.before_percent, null],
+                borderColor: 'rgba(75, 192, 192, 1)',
+                ...pointStyle,
+                pointBorderColor: 'rgba(75, 192, 192, 1)',
+            },
+            {
+                label: 'Current',
+                data: [stats.before_percent, stats.after_percent],
+                borderColor: 'rgba(34, 139, 34, 1)',
+                backgroundColor: 'rgba(34, 139, 34, 0.1)',
+                fill: true,
+                tension: 0, // <--- FORCES STRAIGHT LINES
+                borderWidth: 4,
+                ...pointStyle,
+                pointBorderColor: 'rgba(34, 139, 34, 1)',
+            }
+        ]
+    },
+    options: {
+        responsive: true,
+        plugins: { 
+            title: { display: true, text: 'Forest Vegetation Loss/Gain' },
+            legend: { position: 'bottom' }
+        }
+    }
+});
+
+// ======================
+// POPULATION CHART (Grouped Bar - Keeping the side-by-side design)
+// ======================
+if (populationChart) populationChart.destroy();
+populationChart = new Chart(document.getElementById('populationChart'), {
+    type: 'bar',
+    data: {
+        labels: ['Comparison'],
+        datasets: [
+            {
+                label: `Population (${selectedBeforeYear})`,
+                data: [stats.before_est_population],
+                backgroundColor: 'rgba(54, 162, 235, 0.7)',
+                borderRadius: 5 // Rounds the top of bars slightly
+            },
+            {
+                label: 'Population (2026)',
+                data: [stats.after_est_population],
+                backgroundColor: 'rgba(255, 159, 64, 0.7)',
+                borderRadius: 5
+            }
+        ]
+    },
+    options: {
+        responsive: true,
+        scales: { y: { beginAtZero: true } }
+    }
+});
+
+// ======================
+// CHANGE DETECTED CHART (Straight Lines + Points)
+// ======================
+if (changeChart) changeChart.destroy();
+changeChart = new Chart(document.getElementById('changeChart'), {
+    type: 'line',
+    data: {
+        labels: [selectedBeforeYear, '2026'],
+        datasets: [
+            {
+                label: 'Baseline',
+                data: [0, 0],
+                borderColor: 'rgba(200, 200, 200, 0.5)',
+                borderDash: [10, 5],
+                pointRadius: 0 // No points for the reference line
+            },
+            {
+                label: 'Detected Change %',
+                data: [0, stats.change],
+                borderColor: 'rgba(255, 99, 132, 1)',
+                backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                fill: true,
+                tension: 0, // <--- FORCES STRAIGHT LINES
+                borderWidth: 4,
+                ...pointStyle,
+                pointBorderColor: 'rgba(255, 99, 132, 1)',
+            }
+        ]
+    },
+    options: {
+        responsive: true,
+        plugins: { 
+            legend: { position: 'bottom' }
+        }
+    }
+});
+
+hideLoading();
+                        });
+
+                    } else {
+                        console.log("No historical image found.");
+                    }
+
+                
+                })
+                .catch(error => {
+                    console.error("Error:", error);
+                    alert("An error occurred during analysis.");
+                });
+            }); 
+        }
+
+
+        </script>
+
+    </body>
+
+</html>
