@@ -531,6 +531,20 @@
             <canvas id="changeChart"></canvas>
         </div>
 
+        <!-- Pie charts row: Before & After land-use breakdown -->
+        <div class="charts-grid">
+            <div class="chart-card">
+                <h2>Historical Land Use Breakdown</h2>
+                <p class="chart-subtitle" id="beforePieYear"></p>
+                <canvas id="beforePieChart" class="pie"></canvas>
+            </div>
+            <div class="chart-card">
+                <h2>Current Land Use Breakdown</h2>
+                <p class="chart-subtitle">2026</p>
+                <canvas id="afterPieChart" class="pie"></canvas>
+            </div>
+        </div>
+
     </div>
 
     <!-- ── LOADING SCREEN (unchanged) ── -->
@@ -556,10 +570,12 @@
         countries.forEach(c => { countryBounds[c.country_code] = c.bounds; });
         console.log(countryBounds);
 
-        let forestChart    = null;
+        let forestChart     = null;
         let populationChart = null;
-        let changeChart    = null;
-        let mapLoaded      = false;
+        let changeChart     = null;
+        let beforePieChart  = null;
+        let afterPieChart   = null;
+        let mapLoaded       = false;
 
         function showLoading() {
             const loader = document.getElementById("loading-screen");
@@ -610,7 +626,7 @@
             center: [12.8797, 121.7740],
             zoom: 4,
             minZoom: 4,
-            maxZoom: 12,
+            maxZoom: 13,
             maxBounds: philippinesBounds,
             maxBoundsViscosity: 1.0
         });
@@ -639,7 +655,7 @@
         map.addLayer(drawnItems);
 
         var drawControl = new L.Control.Draw({
-            draw: { polygon: true, rectangle: true },
+            draw: { polygon: true, rectangle: true, circle: false, marker: false, polyline: false, circlemarker: false},
             edit: { featureGroup: drawnItems }
         });
         map.addControl(drawControl);
@@ -673,11 +689,20 @@
                 var width       = bottomRight.x - topLeft.x;
                 var height      = bottomRight.y - topLeft.y;
 
+                // leaflet-image renders tiles at devicePixelRatio scale, but
+                // latLngToContainerPoint returns CSS pixels — we must scale up
+                // the source crop rect to match the canvas's physical pixel space.
+                var dpr = window.devicePixelRatio || 1;
+                var srcX = topLeft.x * dpr;
+                var srcY = topLeft.y * dpr;
+                var srcW = width     * dpr;
+                var srcH = height    * dpr;
+
                 var croppedCanvas = document.createElement('canvas');
                 var ctx = croppedCanvas.getContext('2d');
                 croppedCanvas.width  = width;
                 croppedCanvas.height = height;
-                ctx.drawImage(canvas, topLeft.x, topLeft.y, width, height, 0, 0, width, height);
+                ctx.drawImage(canvas, srcX, srcY, srcW, srcH, 0, 0, width, height);
 
                 var imageData = croppedCanvas.toDataURL("image/png", 0.7);
                 document.getElementById('after-img').src = imageData;
@@ -738,6 +763,8 @@
                             if (forestChart)     forestChart.destroy();
                             if (populationChart) populationChart.destroy();
                             if (changeChart)     changeChart.destroy();
+                            if (beforePieChart)  beforePieChart.destroy();
+                            if (afterPieChart)   afterPieChart.destroy();
 
                             const selectedBeforeYear = document.getElementById("beforeYear").value;
 
@@ -842,6 +869,74 @@
                                     responsive: true,
                                     plugins: { legend: { position: 'bottom' } }
                                 }
+                            });
+
+                            // ── PIE CHART HELPERS ──
+                            const PIE_LABELS = ['Agricultural', 'Desert', 'Tree / Forest', 'Urban', 'Water'];
+                            const PIE_COLORS = [
+                                'rgba(251, 191,  36, 0.85)',   // agricultural – amber
+                                'rgba(217, 119,  87, 0.85)',   // desert       – terracotta
+                                'rgba( 34, 197,  94, 0.85)',   // tree         – green
+                                'rgba( 99, 102, 241, 0.85)',   // urban        – indigo
+                                'rgba( 56, 189, 248, 0.85)',   // water        – sky
+                            ];
+                            const PIE_BORDERS = PIE_COLORS.map(c => c.replace('0.85', '1'));
+
+                            function buildPieData(breakdown) {
+                                return [
+                                    breakdown.agricultural_percentage,
+                                    breakdown.desert_percentage,
+                                    breakdown.tree_percentage,
+                                    breakdown.urban_percentage,
+                                    breakdown.water_percentage,
+                                ];
+                            }
+
+                            const pieOptions = {
+                                responsive: true,
+                                plugins: {
+                                    legend: { position: 'bottom', labels: { padding: 14, font: { size: 12 } } },
+                                    tooltip: {
+                                        callbacks: {
+                                            label: ctx => ` ${ctx.label}: ${ctx.parsed.toFixed(1)}%`
+                                        }
+                                    }
+                                }
+                            };
+
+                            // Label the historical pie with the selected year
+                            document.getElementById('beforePieYear').textContent = selectedBeforeYear;
+
+                            // BEFORE PIE CHART
+                            beforePieChart = new Chart(document.getElementById('beforePieChart'), {
+                                type: 'pie',
+                                data: {
+                                    labels: PIE_LABELS,
+                                    datasets: [{
+                                        data: buildPieData(stats.before_breakdown),
+                                        backgroundColor: PIE_COLORS,
+                                        borderColor: PIE_BORDERS,
+                                        borderWidth: 1.5,
+                                        hoverOffset: 10
+                                    }]
+                                },
+                                options: pieOptions
+                            });
+
+                            // AFTER PIE CHART
+                            afterPieChart = new Chart(document.getElementById('afterPieChart'), {
+                                type: 'pie',
+                                data: {
+                                    labels: PIE_LABELS,
+                                    datasets: [{
+                                        data: buildPieData(stats.after_breakdown),
+                                        backgroundColor: PIE_COLORS,
+                                        borderColor: PIE_BORDERS,
+                                        borderWidth: 1.5,
+                                        hoverOffset: 10
+                                    }]
+                                },
+                                options: pieOptions
                             });
 
                             hideLoading();

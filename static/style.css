@@ -454,8 +454,23 @@ body {
     font-size: 1.1rem;
     font-weight: 400;
     color: var(--forest);
-    margin-bottom: 1.2rem;
+    margin-bottom: 0.3rem;
     padding-left: 0.5rem;
+}
+
+.chart-subtitle {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--leaf);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    padding-left: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+/* Pie chart canvas — taller to fit legend comfortably */
+.chart-card canvas.pie {
+    max-height: 300px !important;
 }
 
 /* Wide single-row chart */
