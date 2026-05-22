@@ -107,6 +107,9 @@ body {
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%234a8c5c' stroke-width='1.8' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
     background-repeat: no-repeat;
     background-position: right 0.7rem center;
+    /* Mobile: ensure min tap target height */
+    min-height: 40px;
+    -webkit-tap-highlight-color: transparent;
 }
 
 .control-group select:focus {
@@ -400,15 +403,20 @@ body {
 #before-img,
 #after-img {
     width: 100%;
-    height: auto;
-    min-height: 220px;
-    max-height: 420px;
+    height: 320px;
     object-fit: contain;
     background: #0f1a12;
     display: block;
     border: none;
     border-radius: 0;
     box-shadow: none;
+}
+
+@media (max-width: 600px) {
+    #before-img,
+    #after-img {
+        height: 220px;
+    }
 }
 
 /* ── CHARTS SECTION ──────────────────────────── */
@@ -743,7 +751,41 @@ body {
 .globe-card-corner--bl { bottom: -1px; left: -1px; border-bottom: 2px solid #4a8c5c; border-left: 2px solid #4a8c5c; border-radius: 0 0 0 4px; }
 .globe-card-corner--br { bottom: -1px; right: -1px; border-bottom: 2px solid #4a8c5c; border-right: 2px solid #4a8c5c; border-radius: 0 0 4px 0; }
 
-/* ── RESPONSIVE ──────────────────────────────── */
+/* ── RESPONSIVE ──────────────────────────────────────── */
+
+/* Small mobile */
+@media (max-width: 480px) {
+    .controls-strip {
+        gap: 0.75rem;
+        padding: 0.85rem 1rem;
+        justify-content: space-between;
+    }
+
+    .control-group {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.3rem;
+        flex: 1;
+        min-width: 120px;
+    }
+
+    .control-group select {
+        width: 100%;
+        font-size: 16px; /* prevent iOS zoom */
+    }
+
+    #map, #map3d {
+        height: 55vh;
+    }
+
+    .fullscreen-btn {
+        width: 44px;
+        height: 44px;
+        bottom: 12px;
+        right: 12px;
+    }
+}
+
 @media (max-width: 700px) {
     .controls-strip {
         gap: 1rem;
@@ -774,6 +816,9 @@ body {
     .tutorial-content-col {
         order: 1;
     }
+    #map, #map3d {
+        height: 60vh;
+    }
 }
 
 @media (max-width: 1024px) and (min-width: 701px) {
@@ -786,4 +831,453 @@ body {
     .tutorial-layout {
         grid-template-columns: 1fr 560px;
     }
+}
+
+/* ══════════════════════════════════════════
+   CHATBOT FAB + PANEL
+══════════════════════════════════════════ */
+
+/* Floating Action Button */
+#chatFab {
+    position: fixed;
+    bottom: 28px;
+    right: 28px;
+    z-index: 9999;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--canopy), var(--forest));
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.25), 0 0 0 0 rgba(74,140,92,0.4);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    animation: fabPulse 3s ease-in-out infinite;
+}
+
+#chatFab:hover {
+    transform: scale(1.08);
+    box-shadow: 0 6px 28px rgba(0,0,0,0.30), 0 0 0 6px rgba(74,140,92,0.15);
+    animation: none;
+}
+
+@keyframes fabPulse {
+    0%, 100% { box-shadow: 0 4px 20px rgba(0,0,0,0.25), 0 0 0 0 rgba(74,140,92,0.4); }
+    50%       { box-shadow: 0 4px 20px rgba(0,0,0,0.25), 0 0 0 10px rgba(74,140,92,0); }
+}
+
+/* Chat Panel */
+#chatPanel {
+    position: fixed;
+    bottom: 96px;
+    right: 28px;
+    z-index: 9998;
+    width: 340px;
+    max-width: calc(100vw - 40px);
+    height: 460px;
+    max-height: calc(100vh - 130px);
+    background: var(--paper);
+    border: 1px solid var(--accent);
+    border-radius: 16px;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 12px 48px rgba(15,32,24,0.18), 0 2px 8px rgba(0,0,0,0.08);
+    opacity: 0;
+    transform: translateY(16px) scale(0.97);
+    pointer-events: none;
+    transition: opacity 0.22s ease, transform 0.22s ease;
+    overflow: hidden;
+}
+
+#chatPanel.chat-panel--open {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    pointer-events: all;
+}
+
+/* Header */
+#chatHeader {
+    padding: 14px 16px;
+    background: linear-gradient(135deg, var(--forest), var(--canopy));
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+    border-radius: 16px 16px 0 0;
+}
+
+.chat-header-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.chat-avatar {
+    width: 34px;
+    height: 34px;
+    background: rgba(255,255,255,0.15);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.chat-title {
+    font-weight: 600;
+    font-size: 0.92rem;
+    letter-spacing: 0.01em;
+}
+
+.chat-subtitle {
+    font-size: 0.74rem;
+    opacity: 0.85;
+    margin-top: 1px;
+    transition: color 0.3s;
+}
+
+/* Offline Banner */
+#chatOfflineBanner {
+    background: #fff3cd;
+    color: #7a5c00;
+    font-size: 0.78rem;
+    padding: 8px 14px;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    border-bottom: 1px solid #f0d98a;
+    flex-shrink: 0;
+}
+
+/* Messages area */
+#chatMessages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 14px 14px 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    scroll-behavior: smooth;
+}
+
+#chatMessages::-webkit-scrollbar { width: 4px; }
+#chatMessages::-webkit-scrollbar-track { background: transparent; }
+#chatMessages::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 4px; }
+
+/* Bot profile avatar in messages */
+.chat-bot-avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+    align-self: flex-end;
+    margin-right: 6px;
+    border: 1.5px solid var(--accent);
+}
+
+/* Message bubbles */
+.chat-msg {
+    display: flex;
+    max-width: 88%;
+}
+
+.chat-msg--user {
+    align-self: flex-end;
+}
+
+.chat-msg--ai {
+    align-self: flex-start;
+}
+
+.chat-msg span {
+    display: block;
+    padding: 9px 13px;
+    border-radius: 12px;
+    font-size: 0.84rem;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.chat-msg--user span {
+    background: linear-gradient(135deg, var(--canopy), var(--leaf));
+    color: #fff;
+    border-bottom-right-radius: 3px;
+}
+
+.chat-msg--ai span {
+    background: var(--warm);
+    color: var(--ink);
+    border: 1px solid var(--accent);
+    border-bottom-left-radius: 3px;
+}
+
+/* Typing indicator */
+.chat-msg--typing span,
+.typing-dots {
+    display: flex !important;
+    align-items: center;
+    gap: 4px;
+    padding: 12px 16px !important;
+    background: var(--warm) !important;
+    border: 1px solid var(--accent) !important;
+    border-radius: 12px;
+    border-bottom-left-radius: 3px !important;
+}
+
+.typing-dots span {
+    width: 7px;
+    height: 7px;
+    background: var(--moss);
+    border-radius: 50%;
+    display: inline-block;
+    animation: typingBounce 1.2s ease-in-out infinite;
+    padding: 0 !important;
+    border: none !important;
+    background-color: var(--moss) !important;
+    border-radius: 50% !important;
+}
+
+.typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+.typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes typingBounce {
+    0%, 60%, 100% { transform: translateY(0); opacity: 0.5; }
+    30%            { transform: translateY(-5px); opacity: 1; }
+}
+
+/* Input area */
+#chatInputArea {
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+    padding: 10px 12px;
+    border-top: 1px solid var(--accent);
+    background: #fff;
+    flex-shrink: 0;
+    border-radius: 0 0 16px 16px;
+}
+
+#chatInput {
+    flex: 1;
+    border: 1px solid var(--accent);
+    border-radius: 10px;
+    padding: 8px 12px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.83rem;
+    color: var(--ink);
+    background: var(--paper);
+    resize: none;
+    outline: none;
+    line-height: 1.45;
+    transition: border-color 0.2s;
+    max-height: 96px;
+    overflow-y: auto;
+}
+
+#chatInput:focus {
+    border-color: var(--leaf);
+    box-shadow: 0 0 0 3px rgba(74,140,92,0.12);
+}
+
+#chatInput:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+#chatSendBtn {
+    width: 36px;
+    height: 36px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--canopy), var(--leaf));
+    border: none;
+    cursor: pointer;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.15s, opacity 0.15s;
+}
+
+#chatSendBtn:hover:not(:disabled) {
+    transform: scale(1.1);
+}
+
+#chatSendBtn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* ── MOBILE: Chat panel goes full-screen-sheet on small devices ── */
+@media (max-width: 480px) {
+    #chatFab {
+        right: 16px;
+        bottom: 20px;
+        width: 52px;
+        height: 52px;
+    }
+
+    /* Slide-up full-width sheet */
+    #chatPanel {
+        position: fixed;
+        bottom: var(--chat-panel-bottom, 0px);
+        left: 0;
+        right: 0;
+        width: 100%;
+        max-width: 100%;
+        /* Uses CSS custom property updated by JS visualViewport API so panel
+           shrinks exactly when the software keyboard appears */
+        height: var(--chat-panel-height, 82dvh);
+        max-height: var(--chat-panel-height, 82dvh);
+        border-radius: 20px 20px 0 0;
+        border-left: none;
+        border-right: none;
+        border-bottom: none;
+        transform: translateY(100%);
+        opacity: 1;
+        pointer-events: none;
+        transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1),
+                    opacity 0.2s ease,
+                    height 0.18s ease,
+                    bottom 0.18s ease;
+    }
+
+    #chatPanel.chat-panel--open {
+        transform: translateY(0);
+        pointer-events: all;
+        opacity: 1;
+    }
+
+    /* Drag handle pill at top of sheet */
+    #chatPanel::before {
+        content: '';
+        display: block;
+        width: 36px;
+        height: 4px;
+        background: rgba(255,255,255,0.35);
+        border-radius: 2px;
+        margin: 8px auto 0;
+        flex-shrink: 0;
+    }
+
+    #chatHeader {
+        border-radius: 20px 20px 0 0;
+    }
+
+    #chatMessages {
+        flex: 1;
+        min-height: 0;
+        padding: 12px 12px 6px;
+        gap: 8px;
+    }
+
+    /* Bigger, easier-to-tap send button on mobile */
+    #chatSendBtn {
+        width: 42px;
+        height: 42px;
+        border-radius: 12px;
+    }
+
+    /* Larger font for mobile readability */
+    #chatInput {
+        font-size: 16px;  /* prevents iOS auto-zoom on focus */
+        padding: 10px 12px;
+    }
+
+    .chat-msg span {
+        font-size: 0.88rem;
+    }
+
+    /* Input area gets extra bottom safe-area padding */
+    #chatInputArea {
+        padding: 10px 12px env(safe-area-inset-bottom, 12px);
+    }
+
+    /* Overlay backdrop behind chat sheet */
+    #chatBackdrop {
+        display: block;
+    }
+}
+
+/* ── Auto Max-Zoom button (map) ─────────────────── */
+#autoMaxZoomBtn {
+    position: absolute;
+    /* sits just above the fullscreen button */
+    bottom: 62px;
+    right: 16px;
+    z-index: 5001;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 0 10px;
+    height: 36px;
+    background: white;
+    border: 2px solid var(--mist);
+    border-radius: 8px;
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--forest);
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+    transition: background 0.15s, border-color 0.15s, color 0.15s, transform 0.15s;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+}
+
+#autoMaxZoomBtn:hover {
+    background: var(--warm);
+    border-color: var(--leaf);
+    color: var(--canopy);
+    transform: scale(1.04);
+}
+
+#autoMaxZoomBtn.active {
+    background: linear-gradient(135deg, var(--canopy), var(--leaf));
+    border-color: var(--leaf);
+    color: #fff;
+    box-shadow: 0 2px 12px rgba(74,140,92,0.30);
+}
+
+#autoMaxZoomBtn svg {
+    flex-shrink: 0;
+}
+
+@media (max-width: 480px) {
+    #autoMaxZoomBtn {
+        /* On mobile give it a bigger tap target and move above the larger fullscreen btn */
+        bottom: 68px;
+        right: 12px;
+        height: 40px;
+        padding: 0 12px;
+        font-size: 0.76rem;
+    }
+}
+
+/* Backdrop overlay (mobile only) */
+#chatBackdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.35);
+    z-index: 9997;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease;
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
+}
+
+#chatBackdrop.active {
+    opacity: 1;
+    pointer-events: all;
 }

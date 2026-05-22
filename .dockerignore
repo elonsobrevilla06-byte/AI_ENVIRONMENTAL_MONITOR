@@ -1,0 +1,17 @@
+# Ignore datasets
+dataset 
+dataset_2
+dataset/
+dataset_2/
+torch_model.pth
+# Ignore common build and environment clutter
+.git
+.gitignore
+__pycache__
+*.pyc
+*.pyo
+.env
+.venv
+venv/
+.vscode
+.idea

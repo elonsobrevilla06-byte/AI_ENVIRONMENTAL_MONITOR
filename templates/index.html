@@ -2,6 +2,12 @@
 <html>
 
 <head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="icon" type="image/x-icon" href="{{(url_for('static', filename='images/logo.png'))}}">
+
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
@@ -71,6 +77,17 @@
     <!-- ── MAP WRAPPER (for fullscreen button) ── -->
     <div class="map-wrapper" id="mapWrapper">
         <div id="map"></div>
+        <!-- Auto Max-Zoom toggle -->
+        <button id="autoMaxZoomBtn" title="Toggle auto max-zoom when a region is drawn">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="11" cy="11" r="8"/>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                <line x1="11" y1="8" x2="11" y2="14"/>
+                <line x1="8" y1="11" x2="14" y2="11"/>
+            </svg>
+            Max-Zoom
+        </button>
+
         <button class="fullscreen-btn" id="fullscreenBtn" title="Toggle fullscreen map">
             <!-- Expand icon -->
             <svg id="fsIconExpand" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
@@ -616,6 +633,12 @@
             if (e.key === 'Escape' && isFullscreen) fullscreenBtn.click();
         });
 
+        // ── AUTO MAX-ZOOM BUTTON ────────────────────────
+        const autoMaxZoomBtn = document.getElementById('autoMaxZoomBtn');
+        autoMaxZoomBtn.addEventListener('click', function () {
+            map.setZoom(map.options.maxZoom);
+        });
+
         // ── MAP SETUP ───────────────────────────────────
         var philippinesBounds = [
             [4.5, 116.0],
@@ -689,20 +712,13 @@
                 var width       = bottomRight.x - topLeft.x;
                 var height      = bottomRight.y - topLeft.y;
 
-                // leaflet-image renders tiles at devicePixelRatio scale, but
-                // latLngToContainerPoint returns CSS pixels — we must scale up
-                // the source crop rect to match the canvas's physical pixel space.
-                var dpr = window.devicePixelRatio || 1;
-                var srcX = topLeft.x * dpr;
-                var srcY = topLeft.y * dpr;
-                var srcW = width     * dpr;
-                var srcH = height    * dpr;
-
+                // leaflet-image renders the map at CSS pixel dimensions,
+                // so coordinates from latLngToContainerPoint map 1:1 — no dpr scaling needed.
                 var croppedCanvas = document.createElement('canvas');
                 var ctx = croppedCanvas.getContext('2d');
                 croppedCanvas.width  = width;
                 croppedCanvas.height = height;
-                ctx.drawImage(canvas, srcX, srcY, srcW, srcH, 0, 0, width, height);
+                ctx.drawImage(canvas, topLeft.x, topLeft.y, width, height, 0, 0, width, height);
 
                 var imageData = croppedCanvas.toDataURL("image/png", 0.7);
                 document.getElementById('after-img').src = imageData;
@@ -953,6 +969,286 @@
             });
         }
 
+    </script>
+
+    <!-- ── MOBILE CHAT BACKDROP ── -->
+    <div id="chatBackdrop"></div>
+
+    <!-- ── CHATBOT FAB ── -->
+    <button id="chatFab" title="Ask the AI Assistant" aria-label="Open AI Assistant">
+        <svg id="chatFabIcon" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+        </svg>
+        <svg id="chatFabClose" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display:none;">
+            <line x1="18" y1="6" x2="6" y2="18"/>
+            <line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+    </button>
+
+    <!-- ── CHATBOT PANEL ── -->
+    <div id="chatPanel" aria-hidden="true">
+        <div id="chatHeader">
+            <div class="chat-header-left">
+                <div class="chat-avatar">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+                </div>
+                <div>
+                    <div class="chat-title">Env AI Assistant</div>
+                    <div class="chat-subtitle" id="chatStatusDot">Checking connection…</div>
+                </div>
+            </div>
+        </div>
+
+        <div id="chatOfflineBanner" style="display:none;">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            AI is currently unavailable. Make sure Ollama is running locally.
+        </div>
+
+        <div id="chatMessages">
+            <div class="chat-msg chat-msg--ai">
+                <img src="/static/images/bot_profile.png" class="chat-bot-avatar" alt="Bot">
+                <span>Hello! I'm your Environmental AI assistant. Ask me anything about land use, deforestation, satellite analysis, or the results on your map.</span>
+            </div>
+        </div>
+
+        <div id="chatInputArea">
+            <textarea id="chatInput" placeholder="Ask about land use, forests, urbanization…" rows="1" disabled></textarea>
+            <button id="chatSendBtn" disabled>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+            </button>
+        </div>
+    </div>
+
+    <script>
+    (function () {
+        // ── Ollama proxy endpoints (requests go to Flask, not Ollama directly) ──
+        const CHAT_URL   = '/chat/message';
+        const HEALTH_URL = '/chat/health';
+
+        const fab        = document.getElementById('chatFab');
+        const panel      = document.getElementById('chatPanel');
+        const fabIcon    = document.getElementById('chatFabIcon');
+        const fabClose   = document.getElementById('chatFabClose');
+        const messages   = document.getElementById('chatMessages');
+        const input      = document.getElementById('chatInput');
+        const sendBtn    = document.getElementById('chatSendBtn');
+        const statusDot  = document.getElementById('chatStatusDot');
+        const offlineBanner = document.getElementById('chatOfflineBanner');
+        const backdrop   = document.getElementById('chatBackdrop');
+
+        let isOpen    = false;
+        let isOnline  = false;
+        let isThinking = false;
+        let checkedOnce = false;
+
+        // ── Check Ollama availability (via Flask proxy) ──
+        async function checkOllama() {
+            try {
+                const res = await fetch(HEALTH_URL, {
+                    signal: AbortSignal.timeout(4000)
+                });
+                const data = await res.json();
+                setOnline(data.available === true);
+            } catch {
+                setOnline(false);
+            }
+            checkedOnce = true;
+        }
+
+        function setOnline(online) {
+            isOnline = online;
+            if (online) {
+                statusDot.textContent   = '● Online';
+                statusDot.style.color   = '#4a8c5c';
+                offlineBanner.style.display = 'none';
+                input.disabled   = false;
+                sendBtn.disabled = false;
+                input.placeholder = 'Ask about land use, forests, urbanization…';
+            } else {
+                statusDot.textContent   = '● Offline';
+                statusDot.style.color   = '#c0392b';
+                offlineBanner.style.display = 'flex';
+                input.disabled   = true;
+                sendBtn.disabled = true;
+                input.placeholder = 'AI is unavailable…';
+            }
+        }
+
+        // ── Toggle panel ──
+        fab.addEventListener('click', () => {
+            isOpen = !isOpen;
+            panel.classList.toggle('chat-panel--open', isOpen);
+            panel.setAttribute('aria-hidden', String(!isOpen));
+            fabIcon.style.display  = isOpen ? 'none'  : 'block';
+            fabClose.style.display = isOpen ? 'block' : 'none';
+            // Mobile backdrop
+            if (backdrop) backdrop.classList.toggle('active', isOpen);
+
+            // Check connection every time panel opens
+            if (isOpen) {
+                statusDot.textContent = 'Checking…';
+                statusDot.style.color = '#c8a84b';
+                checkOllama();
+            }
+        });
+
+        // Tap backdrop to close (mobile)
+        if (backdrop) {
+            backdrop.addEventListener('click', () => {
+                if (isOpen) fab.click();
+            });
+        }
+
+        // ── Auto-resize textarea ──
+        input.addEventListener('input', () => {
+            input.style.height = 'auto';
+            input.style.height = Math.min(input.scrollHeight, 96) + 'px';
+        });
+
+        // ── Send on Enter (Shift+Enter = newline) ──
+        input.addEventListener('keydown', e => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+
+        sendBtn.addEventListener('click', sendMessage);
+
+        // ── Mobile keyboard: shrink the chat panel when virtual keyboard appears ──
+        // Uses the visualViewport API (supported on all modern mobile browsers).
+        // We update CSS custom properties on <html> that the panel's height/bottom rules read.
+        if (window.visualViewport) {
+            function onViewportResize() {
+                const availableH = window.visualViewport.height;
+                const panelH     = Math.round(availableH * 0.82);
+                // offsetTop = how far the visual viewport has scrolled inside the layout
+                // viewport — on Android this equals the keyboard height when open.
+                // On iOS the viewport itself shrinks so offsetTop stays 0; the height
+                // change alone is enough there.
+                const keyboardH  = Math.round(window.visualViewport.offsetTop || 0);
+                document.documentElement.style.setProperty(
+                    '--chat-panel-height', panelH + 'px'
+                );
+                // Lift the panel above the keyboard
+                document.documentElement.style.setProperty(
+                    '--chat-panel-bottom', keyboardH + 'px'
+                );
+                messages.scrollTop = messages.scrollHeight;
+            }
+            window.visualViewport.addEventListener('resize', onViewportResize);
+            window.visualViewport.addEventListener('scroll', onViewportResize);
+        }
+
+        function appendMessage(role, text) {
+            const div = document.createElement('div');
+            div.className = 'chat-msg ' + (role === 'user' ? 'chat-msg--user' : 'chat-msg--ai');
+            if (role !== 'user') {
+                const avatar = document.createElement('img');
+                avatar.src = '/static/images/bot_profile.png';
+                avatar.className = 'chat-bot-avatar';
+                avatar.alt = 'Bot';
+                div.appendChild(avatar);
+            }
+            const span = document.createElement('span');
+            span.textContent = text;
+            div.appendChild(span);
+            messages.appendChild(div);
+            messages.scrollTop = messages.scrollHeight;
+            return span; // return for streaming
+        }
+
+        function showTyping() {
+            const div = document.createElement('div');
+            div.className = 'chat-msg chat-msg--ai chat-msg--typing';
+            div.id = 'typingIndicator';
+            div.innerHTML = '<img src="/static/images/bot_profile.png" class="chat-bot-avatar" alt="Bot"><span class="typing-dots"><span></span><span></span><span></span></span>';
+            messages.appendChild(div);
+            messages.scrollTop = messages.scrollHeight;
+        }
+
+        function removeTyping() {
+            const el = document.getElementById('typingIndicator');
+            if (el) el.remove();
+        }
+
+        async function sendMessage() {
+            const text = input.value.trim();
+            if (!text || isThinking || !isOnline) return;
+
+            appendMessage('user', text);
+            input.value = '';
+            input.style.height = 'auto';
+            input.disabled = true;
+            sendBtn.disabled = true;
+            isThinking = true;
+
+            showTyping();
+
+            try {
+                // ── Send message to Flask proxy → Ollama ──
+                const res = await fetch(CHAT_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: text }),
+                    signal: AbortSignal.timeout(60000)
+                });
+
+                if (!res.ok) throw new Error('Ollama responded with ' + res.status);
+
+                removeTyping();
+                const aiDiv  = document.createElement('div');
+                aiDiv.className = 'chat-msg chat-msg--ai';
+                const aiAvatar = document.createElement('img');
+                aiAvatar.src = '/static/images/bot_profile.png';
+                aiAvatar.className = 'chat-bot-avatar';
+                aiAvatar.alt = 'Bot';
+                aiDiv.appendChild(aiAvatar);
+                const aiSpan = document.createElement('span');
+                aiDiv.appendChild(aiSpan);
+                messages.appendChild(aiDiv);
+
+                const reader  = res.body.getReader();
+                const decoder = new TextDecoder();
+                let buffer    = '';
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    buffer += decoder.decode(value, { stream: true });
+                    const lines = buffer.split('\n');
+                    buffer = lines.pop(); 
+                    for (const line of lines) {
+                        if (!line.trim()) continue;
+                        try {
+                            const obj = JSON.parse(line);
+                            if (obj.message && obj.message.content) {
+                                aiSpan.textContent += obj.message.content;
+                                messages.scrollTop = messages.scrollHeight;
+                            }
+                        } catch {}
+                    }
+                }
+
+            } catch (err) {
+                removeTyping();
+                // If it's a network/timeout error, mark as offline
+                if (err.name === 'TypeError' || err.name === 'AbortError') {
+                    setOnline(false);
+                    appendMessage('ai', 'AI is unavailable right now. Please make sure Ollama is running locally.');
+                } else {
+                    appendMessage('ai', 'Something went wrong: ' + err.message);
+                }
+            } finally {
+                isThinking = false;
+                if (isOnline) {
+                    input.disabled   = false;
+                    sendBtn.disabled = false;
+                    input.focus();
+                }
+            }
+        }
+    })();
     </script>
 
 </body>
