@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>GPU Monitor — EcoVision</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600&family=Syne:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+:root{
+  --bg:#0b0d11;
+  --surface:#12151b;
+  --surface2:#191d26;
+  --border:#1e2330;
+  --border2:#252c3a;
+  --text:#e8ecf3;
+  --text2:#8892a8;
+  --text3:#4e5a70;
+  --accent:#00d4ff;
+  --accent2:#0098ba;
+  --green:#00e5a0;
+  --yellow:#f5c842;
+  --red:#ff4d6a;
+  --purple:#9b6dff;
+  --font-mono:'JetBrains Mono',monospace;
+  --font-ui:'Syne',sans-serif;
+}
+
+body{
+  background:var(--bg);
+  color:var(--text);
+  font-family:var(--font-ui);
+  min-height:100vh;
+  padding:0;
+  overflow-x:hidden;
+}
+
+/* scanline overlay */
+body::before{
+  content:'';
+  position:fixed;
+  inset:0;
+  background:repeating-linear-gradient(
+    0deg,transparent,transparent 2px,rgba(0,212,255,.018) 2px,rgba(0,212,255,.018) 4px
+  );
+  pointer-events:none;
+  z-index:999;
+}
+
+/* ── header ──────────────────────────────────────────────────────────────── */
+.header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:18px 32px;
+  border-bottom:1px solid var(--border);
+  background:var(--surface);
+  position:sticky;top:0;z-index:10;
+}
+.header-left{display:flex;align-items:center;gap:14px}
+.logo-mark{
+  width:36px;height:36px;
+  border:1px solid var(--accent2);
+  border-radius:8px;
+  display:flex;align-items:center;justify-content:center;
+  color:var(--accent);
+}
+.logo-mark svg{width:18px;height:18px}
+.header-title{font-size:15px;font-weight:600;letter-spacing:.04em;color:var(--text)}
+.header-sub{font-size:11px;font-family:var(--font-mono);color:var(--text3);letter-spacing:.06em;text-transform:uppercase;margin-top:1px}
+
+.header-right{display:flex;align-items:center;gap:16px}
+.status-pill{
+  display:flex;align-items:center;gap:6px;
+  padding:5px 12px;
+  border-radius:20px;
+  border:1px solid var(--border2);
+  font-size:11px;font-family:var(--font-mono);
+  color:var(--text2);
+  background:var(--surface2);
+}
+.status-dot{
+  width:7px;height:7px;border-radius:50%;
+  background:var(--text3);
+  transition:background .3s;
+}
+.status-dot.live{background:var(--green);box-shadow:0 0 6px var(--green)}
+.status-dot.busy{background:var(--yellow);box-shadow:0 0 6px var(--yellow)}
+
+.btn-back{
+  display:flex;align-items:center;gap:6px;
+  font-size:12px;font-family:var(--font-mono);
+  color:var(--text2);
+  text-decoration:none;
+  padding:6px 12px;
+  border:1px solid var(--border2);
+  border-radius:6px;
+  transition:all .2s;
+  background:transparent;
+  cursor:pointer;
+}
+.btn-back:hover{color:var(--accent);border-color:var(--accent2)}
+
+/* ── layout ──────────────────────────────────────────────────────────────── */
+.page{padding:28px 32px;max-width:1280px;margin:0 auto}
+
+/* ── gpu selector ────────────────────────────────────────────────────────── */
+.gpu-tabs{display:flex;gap:6px;margin-bottom:24px}
+.gpu-tab{
+  padding:6px 16px;
+  border:1px solid var(--border2);
+  border-radius:6px;
+  font-size:11px;font-family:var(--font-mono);letter-spacing:.04em;
+  color:var(--text2);background:var(--surface);cursor:pointer;
+  transition:all .2s;
+}
+.gpu-tab.active{background:var(--accent);color:#000;border-color:var(--accent);font-weight:600}
+.gpu-tab:hover:not(.active){border-color:var(--accent2);color:var(--accent)}
+
+/* ── grid ────────────────────────────────────────────────────────────────── */
+.grid-2{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin-bottom:16px}
+.grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:16px}
+
+/* ── stat card ───────────────────────────────────────────────────────────── */
+.card{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:12px;
+  padding:18px 20px;
+  transition:border-color .3s;
+}
+.card:hover{border-color:var(--border2)}
+.card-label{font-size:10px;font-family:var(--font-mono);color:var(--text3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:6px}
+.card-value{font-size:28px;font-family:var(--font-mono);font-weight:500;color:var(--text);line-height:1}
+.card-value.green{color:var(--green)}
+.card-value.yellow{color:var(--yellow)}
+.card-value.red{color:var(--red)}
+.card-unit{font-size:12px;color:var(--text3);font-family:var(--font-mono);margin-top:4px}
+
+/* ── bar gauge ───────────────────────────────────────────────────────────── */
+.gauge-card{padding:20px}
+.gauge-label{font-size:10px;font-family:var(--font-mono);color:var(--text3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center}
+.gauge-label span{font-size:13px;font-weight:500;color:var(--text);font-family:var(--font-mono)}
+.gauge-track{
+  height:6px;border-radius:3px;
+  background:var(--surface2);
+  overflow:hidden;margin-bottom:10px;
+}
+.gauge-fill{
+  height:100%;border-radius:3px;
+  transition:width .6s cubic-bezier(.4,0,.2,1), background .6s;
+}
+
+/* ── sparkline ───────────────────────────────────────────────────────────── */
+.spark-card{position:relative;overflow:hidden;min-height:100px}
+.spark-card canvas{display:block;width:100%;height:72px}
+
+/* ── gpu name banner ─────────────────────────────────────────────────────── */
+.gpu-banner{
+  background:var(--surface2);
+  border:1px solid var(--border2);
+  border-radius:12px;
+  padding:16px 22px;
+  margin-bottom:16px;
+  display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;
+}
+.gpu-name{font-size:16px;font-weight:600;color:var(--accent);letter-spacing:.02em}
+.gpu-meta{display:flex;gap:20px;flex-wrap:wrap}
+.gpu-meta-item{font-size:11px;font-family:var(--font-mono);color:var(--text2)}
+.gpu-meta-item strong{color:var(--text);margin-left:4px}
+
+/* ── section title ───────────────────────────────────────────────────────── */
+.section-title{
+  font-size:10px;font-family:var(--font-mono);color:var(--text3);
+  letter-spacing:.14em;text-transform:uppercase;
+  margin-bottom:12px;margin-top:24px;
+  display:flex;align-items:center;gap:8px;
+}
+.section-title::after{content:'';flex:1;height:1px;background:var(--border)}
+
+/* ── process list ────────────────────────────────────────────────────────── */
+.proc-list{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:12px;
+  overflow:hidden;
+}
+.proc-header{
+  display:grid;grid-template-columns:80px 1fr 120px;
+  padding:10px 20px;
+  border-bottom:1px solid var(--border);
+  font-size:10px;font-family:var(--font-mono);color:var(--text3);
+  letter-spacing:.08em;text-transform:uppercase;
+}
+.proc-row{
+  display:grid;grid-template-columns:80px 1fr 120px;
+  padding:11px 20px;
+  border-bottom:1px solid var(--border);
+  font-size:12px;font-family:var(--font-mono);color:var(--text2);
+  transition:background .15s;
+}
+.proc-row:last-child{border-bottom:none}
+.proc-row:hover{background:var(--surface2)}
+.proc-pid{color:var(--accent);font-weight:500}
+.proc-mem{color:var(--text);text-align:right}
+.proc-empty{
+  padding:24px 20px;
+  text-align:center;
+  font-size:11px;font-family:var(--font-mono);
+  color:var(--text3);
+}
+
+/* ── analysis state banner ───────────────────────────────────────────────── */
+.analysis-banner{
+  border-radius:10px;
+  padding:14px 20px;
+  margin-bottom:16px;
+  display:flex;align-items:center;gap:12px;
+  border:1px solid;
+  transition:all .4s;
+}
+.analysis-banner.idle{
+  background:rgba(0,229,160,.04);
+  border-color:rgba(0,229,160,.15);
+}
+.analysis-banner.busy{
+  background:rgba(245,200,66,.06);
+  border-color:rgba(245,200,66,.2);
+  animation:pulse-border 2s infinite;
+}
+@keyframes pulse-border{
+  0%,100%{border-color:rgba(245,200,66,.2)}
+  50%{border-color:rgba(245,200,66,.5)}
+}
+.analysis-banner-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+.idle .analysis-banner-dot{background:var(--green)}
+.busy .analysis-banner-dot{background:var(--yellow);box-shadow:0 0 8px var(--yellow);animation:dot-pulse 1.2s infinite}
+@keyframes dot-pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.analysis-banner-text{font-size:12px;font-family:var(--font-mono);color:var(--text2)}
+.analysis-banner-text strong{font-size:13px;color:var(--text)}
+
+/* ── comparison row ──────────────────────────────────────────────────────── */
+.compare-grid{
+  display:grid;grid-template-columns:1fr 1px 1fr;gap:0;
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:12px;overflow:hidden;
+  margin-bottom:16px;
+}
+.compare-divider{background:var(--border)}
+.compare-col{padding:20px 24px}
+.compare-label{
+  font-size:10px;font-family:var(--font-mono);letter-spacing:.12em;text-transform:uppercase;
+  color:var(--text3);margin-bottom:14px;display:flex;align-items:center;gap:8px;
+}
+.compare-label .dot{width:7px;height:7px;border-radius:50%}
+.compare-label .dot.green{background:var(--green)}
+.compare-label .dot.yellow{background:var(--yellow)}
+.compare-row{
+  display:flex;justify-content:space-between;align-items:baseline;
+  padding:5px 0;border-bottom:1px solid var(--border);
+  font-size:11px;font-family:var(--font-mono);
+}
+.compare-row:last-child{border-bottom:none}
+.compare-row .key{color:var(--text3)}
+.compare-row .val{color:var(--text);font-weight:500}
+
+/* ── no gpu warning ──────────────────────────────────────────────────────── */
+.no-gpu{
+  text-align:center;padding:60px 32px;
+  font-family:var(--font-mono);color:var(--text3);
+}
+.no-gpu h2{font-size:16px;color:var(--text2);margin-bottom:10px}
+.no-gpu p{font-size:12px;line-height:1.8}
+.no-gpu code{
+  display:inline-block;
+  background:var(--surface2);border:1px solid var(--border2);
+  border-radius:4px;padding:12px 20px;
+  margin-top:16px;color:var(--accent);
+  font-size:12px;text-align:left;
+}
+
+/* ── refresh ticker ──────────────────────────────────────────────────────── */
+.ticker{
+  font-size:10px;font-family:var(--font-mono);
+  color:var(--text3);text-align:right;margin-bottom:8px;
+}
+
+/* ── responsive ──────────────────────────────────────────────────────────── */
+@media(max-width:700px){
+  .grid-4{grid-template-columns:repeat(2,1fr)}
+  .grid-2,.grid-3{grid-template-columns:1fr}
+  .compare-grid{grid-template-columns:1fr;grid-template-rows:auto 1px auto}
+  .compare-divider{height:1px}
+  .page{padding:16px}
+  .header{padding:14px 16px}
+}
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="header-left">
+    <div class="logo-mark">
+      <svg viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M14 2C7.373 2 2 7.373 2 14s5.373 12 12 12 12-5.373 12-12S20.627 2 14 2z" fill="currentColor" opacity=".2"/>
+        <circle cx="14" cy="14" r="4" fill="currentColor"/>
+        <path d="M14 2v4M14 22v4M2 14h4M22 14h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <div>
+      <div class="header-title">GPU Monitor</div>
+      <div class="header-sub">EcoVision · CUDA Performance</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="status-pill">
+      <div class="status-dot" id="statusDot"></div>
+      <span id="statusText">connecting…</span>
+    </div>
+    <a href="/admin/dashboard" class="btn-back">
+      <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+        <path d="M9 6.5H4M6 4L3.5 6.5 6 9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      dashboard
+    </a>
+  </div>
+</header>
+
+<main class="page">
+
+  <div id="gpuTabs" class="gpu-tabs"></div>
+
+  <div id="noGpuWarning" class="no-gpu" style="display:none">
+    <h2>No CUDA GPU detected</h2>
+    <p>pynvml could not find an NVIDIA GPU.<br>
+    Make sure your drivers are installed and the backend has pynvml:</p>
+    <code>pip install pynvml</code>
+  </div>
+
+  <div id="monitorBody">
+
+    <!-- analysis state banner -->
+    <div class="analysis-banner idle" id="analysisBanner">
+      <div class="analysis-banner-dot"></div>
+      <div class="analysis-banner-text">
+        <strong id="analysisState">Idle</strong>
+        <span id="analysisDetail"> — no active GPU compute processes</span>
+      </div>
+    </div>
+
+    <!-- gpu info banner -->
+    <div class="gpu-banner">
+      <div class="gpu-name" id="gpuName">—</div>
+      <div class="gpu-meta">
+        <div class="gpu-meta-item">CUDA<strong id="cudaVer">—</strong></div>
+        <div class="gpu-meta-item">PyTorch<strong id="torchVer">—</strong></div>
+        <div class="gpu-meta-item">VRAM<strong id="vramTotal">—</strong></div>
+      </div>
+    </div>
+
+    <!-- live metrics -->
+    <div class="section-title">live metrics</div>
+    <div class="grid-4">
+      <div class="card">
+        <div class="card-label">Core util</div>
+        <div class="card-value" id="valUtil">0</div>
+        <div class="card-unit">percent</div>
+      </div>
+      <div class="card">
+        <div class="card-label">Temperature</div>
+        <div class="card-value" id="valTemp">0</div>
+        <div class="card-unit">°C</div>
+      </div>
+      <div class="card">
+        <div class="card-label">Power draw</div>
+        <div class="card-value" id="valPower">0</div>
+        <div class="card-unit">watts</div>
+      </div>
+      <div class="card">
+        <div class="card-label">SM clock</div>
+        <div class="card-value" id="valClock">0</div>
+        <div class="card-unit">MHz</div>
+      </div>
+    </div>
+
+    <!-- gauges -->
+    <div class="section-title">utilisation</div>
+    <div class="grid-2">
+      <div class="card gauge-card">
+        <div class="gauge-label">Core utilisation<span id="gUtilVal">0%</span></div>
+        <div class="gauge-track"><div class="gauge-fill" id="gUtil" style="width:0%"></div></div>
+        <div class="gauge-label">Memory bandwidth<span id="gBwVal">0%</span></div>
+        <div class="gauge-track"><div class="gauge-fill" id="gBw" style="width:0%"></div></div>
+        <div class="gauge-label">VRAM usage<span id="gVramVal">0%</span></div>
+        <div class="gauge-track"><div class="gauge-fill" id="gVram" style="width:0%"></div></div>
+      </div>
+      <div class="card" style="padding:18px 20px">
+        <div class="card-label">VRAM</div>
+        <div style="font-size:24px;font-family:var(--font-mono);font-weight:500;color:var(--text);margin-bottom:6px">
+          <span id="vramUsed">0</span> <span style="font-size:14px;color:var(--text3)">/ <span id="vramTotalGauge">0</span> MB</span>
+        </div>
+        <div class="gauge-track" style="margin-top:10px">
+          <div class="gauge-fill" id="gVram2" style="width:0%"></div>
+        </div>
+        <div style="margin-top:16px">
+          <div class="card-label">Fan speed</div>
+          <div style="font-size:22px;font-family:var(--font-mono);font-weight:500;color:var(--text)" id="valFan">—</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- history sparkline -->
+    <div class="section-title">history (last 60 s)</div>
+    <div class="grid-3">
+      <div class="card spark-card" id="sparkUtilCard">
+        <div class="card-label">Core util %</div>
+        <canvas id="sparkUtil" role="img" aria-label="Core utilisation history"></canvas>
+      </div>
+      <div class="card spark-card" id="sparkTempCard">
+        <div class="card-label">Temperature °C</div>
+        <canvas id="sparkTemp" role="img" aria-label="Temperature history"></canvas>
+      </div>
+      <div class="card spark-card" id="sparkPowerCard">
+        <div class="card-label">Power W</div>
+        <canvas id="sparkPower" role="img" aria-label="Power draw history"></canvas>
+      </div>
+    </div>
+
+    <!-- idle vs analysing comparison -->
+    <div class="section-title">idle vs analysing comparison</div>
+    <div class="compare-grid">
+      <div class="compare-col">
+        <div class="compare-label"><div class="dot green"></div>idle baseline</div>
+        <div id="idleRows">
+          <div class="compare-row"><span class="key">core util</span><span class="val" id="ci_util">—</span></div>
+          <div class="compare-row"><span class="key">memory bw</span><span class="val" id="ci_bw">—</span></div>
+          <div class="compare-row"><span class="key">vram used</span><span class="val" id="ci_vram">—</span></div>
+          <div class="compare-row"><span class="key">temperature</span><span class="val" id="ci_temp">—</span></div>
+          <div class="compare-row"><span class="key">power</span><span class="val" id="ci_power">—</span></div>
+        </div>
+      </div>
+      <div class="compare-divider"></div>
+      <div class="compare-col">
+        <div class="compare-label"><div class="dot yellow"></div>analysing peak</div>
+        <div id="busyRows">
+          <div class="compare-row"><span class="key">core util</span><span class="val" id="cb_util">—</span></div>
+          <div class="compare-row"><span class="key">memory bw</span><span class="val" id="cb_bw">—</span></div>
+          <div class="compare-row"><span class="key">vram used</span><span class="val" id="cb_vram">—</span></div>
+          <div class="compare-row"><span class="key">temperature</span><span class="val" id="cb_temp">—</span></div>
+          <div class="compare-row"><span class="key">power</span><span class="val" id="cb_power">—</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- process list -->
+    <div class="section-title">gpu compute processes</div>
+    <div class="proc-list" id="procList">
+      <div class="proc-header">
+        <span>PID</span>
+        <span>process</span>
+        <span style="text-align:right">VRAM</span>
+      </div>
+      <div class="proc-empty" id="procEmpty">no active compute processes</div>
+    </div>
+
+    <div class="ticker" id="ticker">last update: —</div>
+
+  </div><!-- /#monitorBody -->
+
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+(function(){
+
+/* ── config ──────────────────────────────────────────────────────────────── */
+const POLL_MS   = 1500;
+const HIST_LEN  = 60;
+
+let activeGpu   = 0;
+let history     = { util:[], temp:[], power:[] };
+let idleSnap    = null;
+let busySnap    = null;
+let charts      = {};
+
+/* ── sparkline factory ───────────────────────────────────────────────────── */
+function makeSparkline(id, color, max){
+  const ctx = document.getElementById(id);
+  if(!ctx) return null;
+  return new Chart(ctx, {
+    type:'line',
+    data:{
+      labels: Array(HIST_LEN).fill(''),
+      datasets:[{
+        data: Array(HIST_LEN).fill(null),
+        borderColor: color,
+        borderWidth: 1.5,
+        fill: true,
+        backgroundColor: color.replace('1)','0.08)'),
+        pointRadius: 0,
+        tension: 0.4
+      }]
+    },
+    options:{
+      responsive:true,
+      maintainAspectRatio:false,
+      animation:false,
+      plugins:{legend:{display:false},tooltip:{enabled:false}},
+      scales:{
+        x:{display:false},
+        y:{display:false,min:0,max:max||100,suggestedMin:0}
+      }
+    }
+  });
+}
+
+function initCharts(){
+  charts.util  = makeSparkline('sparkUtil',  'rgba(0,212,255,1)',   100);
+  charts.temp  = makeSparkline('sparkTemp',  'rgba(245,200,66,1)',  120);
+  charts.power = makeSparkline('sparkPower', 'rgba(155,109,255,1)', null);
+}
+
+function pushHistory(stats){
+  history.util.push(stats.util_gpu);
+  history.temp.push(stats.temp_c);
+  history.power.push(stats.power_w);
+  if(history.util.length  > HIST_LEN){ history.util.shift() }
+  if(history.temp.length  > HIST_LEN){ history.temp.shift() }
+  if(history.power.length > HIST_LEN){ history.power.shift() }
+
+  if(charts.util){
+    charts.util.data.datasets[0].data = [...history.util];
+    charts.util.update('none');
+  }
+  if(charts.temp){
+    charts.temp.data.datasets[0].data = [...history.temp];
+    charts.temp.options.scales.y.max = Math.max(120, ...history.temp) * 1.1;
+    charts.temp.update('none');
+  }
+  if(charts.power){
+    charts.power.data.datasets[0].data = [...history.power];
+    charts.power.options.scales.y.max = Math.max(50, ...history.power) * 1.15;
+    charts.power.update('none');
+  }
+}
+
+/* ── gauge colour ────────────────────────────────────────────────────────── */
+function gaugeColor(pct){
+  if(pct>=80) return '#ff4d6a';
+  if(pct>=50) return '#f5c842';
+  return '#00d4ff';
+}
+function tempColor(t){
+  if(t>=80) return '#ff4d6a';
+  if(t>=60) return '#f5c842';
+  return '#00e5a0';
+}
+
+/* ── DOM helpers ─────────────────────────────────────────────────────────── */
+function setGauge(id, pct){
+  const el = document.getElementById(id);
+  if(!el) return;
+  const c = gaugeColor(pct);
+  el.style.width = Math.min(100,pct)+'%';
+  el.style.background = c;
+}
+function setText(id, val){ const e=document.getElementById(id); if(e) e.textContent=val; }
+function setClass(id, cls){ const e=document.getElementById(id); if(e){e.className='card-value '+cls} }
+
+/* ── idle/busy snapshot ──────────────────────────────────────────────────── */
+function snap(stats){
+  return {
+    util:  stats.util_gpu+'%',
+    bw:    stats.util_mem_bw+'%',
+    vram:  stats.mem_used_mb+' MB',
+    temp:  stats.temp_c+' °C',
+    power: stats.power_w+' W'
+  };
+}
+function renderCompare(prefix, s){
+  if(!s) return;
+  setText(prefix+'_util',  s.util);
+  setText(prefix+'_bw',    s.bw);
+  setText(prefix+'_vram',  s.vram);
+  setText(prefix+'_temp',  s.temp);
+  setText(prefix+'_power', s.power);
+}
+
+/* ── render stats ────────────────────────────────────────────────────────── */
+function renderStats(stats){
+  const isBusy = stats.process_count > 0 || stats.util_gpu > 10;
+
+  /* banner */
+  const banner = document.getElementById('analysisBanner');
+  if(banner){
+    banner.className = 'analysis-banner '+(isBusy?'busy':'idle');
+    setText('analysisState', isBusy ? 'Analysing' : 'Idle');
+    setText('analysisDetail', isBusy
+      ? ` — ${stats.process_count} process${stats.process_count!==1?'es':''}, ${stats.util_gpu}% utilisation`
+      : ' — no active GPU compute processes');
+  }
+
+  /* status dot */
+  const dot  = document.getElementById('statusDot');
+  const stxt = document.getElementById('statusText');
+  if(dot && stxt){
+    dot.className  = 'status-dot '+(isBusy?'busy':'live');
+    stxt.textContent = isBusy ? 'analysing' : 'idle';
+  }
+
+  /* gpu banner */
+  setText('gpuName',    stats.gpu_name||'Unknown GPU');
+  setText('cudaVer',    ' '+stats.cuda_version);
+  setText('torchVer',   ' '+stats.torch_version);
+  setText('vramTotal',  ' '+stats.mem_total_mb+' MB');
+
+  /* metric cards */
+  const util = stats.util_gpu;
+  setText('valUtil', util);
+  setClass('valUtil', util>=70?'red':util>=30?'yellow':'green');
+
+  const temp = stats.temp_c;
+  setText('valTemp', temp);
+  setClass('valTemp', temp>=80?'red':temp>=60?'yellow':'green');
+  document.getElementById('valTemp').style.color = tempColor(temp);
+
+  setText('valPower', stats.power_w.toFixed(1));
+  setText('valClock', stats.clock_sm_mhz);
+
+  /* gauges */
+  setGauge('gUtil',  stats.util_gpu);
+  setText('gUtilVal', stats.util_gpu+'%');
+  setGauge('gBw',    stats.util_mem_bw);
+  setText('gBwVal',  stats.util_mem_bw+'%');
+  setGauge('gVram',  stats.mem_pct);
+  setText('gVramVal', stats.mem_pct+'%');
+  setGauge('gVram2', stats.mem_pct);
+
+  setText('vramUsed',       stats.mem_used_mb.toLocaleString());
+  setText('vramTotalGauge', stats.mem_total_mb.toLocaleString());
+  setText('valFan', stats.fan_pct!=null ? stats.fan_pct+'%' : '—');
+
+  /* history */
+  pushHistory(stats);
+
+  /* processes */
+  const procList = document.getElementById('procList');
+  const procEmpty = document.getElementById('procEmpty');
+  /* clear old rows */
+  const oldRows = procList.querySelectorAll('.proc-row');
+  oldRows.forEach(r=>r.remove());
+
+  if(stats.process_count > 0 && stats.processes && stats.processes.length>0){
+    if(procEmpty) procEmpty.style.display='none';
+    stats.processes.forEach(p=>{
+      const row = document.createElement('div');
+      row.className='proc-row';
+      row.innerHTML=`<span class="proc-pid">${p.pid}</span><span>python / torch worker</span><span class="proc-mem">${p.mem_mb} MB</span>`;
+      procList.appendChild(row);
+    });
+  } else {
+    if(procEmpty){ procEmpty.style.display='block'; }
+  }
+
+  /* idle / busy snapshots */
+  if(!isBusy && history.util.length > 3){
+    idleSnap = snap(stats);
+    renderCompare('ci', idleSnap);
+  }
+  if(isBusy){
+    const candidate = snap(stats);
+    if(!busySnap ||
+       parseInt(candidate.util) > parseInt(busySnap.util)){
+      busySnap = candidate;
+      renderCompare('cb', busySnap);
+    }
+  }
+
+  /* ticker */
+  setText('ticker', 'last update: '+stats.timestamp+'  ·  polling every 1.5 s');
+
+  /* no-gpu warning */
+  const noGpu = document.getElementById('noGpuWarning');
+  const body  = document.getElementById('monitorBody');
+  if(noGpu && body){
+    if(!stats.nvml_available){
+      noGpu.style.display='block';
+      body.style.display='none';
+    } else {
+      noGpu.style.display='none';
+      body.style.display='block';
+    }
+  }
+}
+
+/* ── GPU tab switching ───────────────────────────────────────────────────── */
+function buildTabs(count){
+  const container = document.getElementById('gpuTabs');
+  if(!container) return;
+  container.innerHTML='';
+  for(let i=0;i<count;i++){
+    const btn = document.createElement('button');
+    btn.className='gpu-tab'+(i===activeGpu?' active':'');
+    btn.textContent='GPU '+i;
+    btn.addEventListener('click',()=>{
+      activeGpu=i;
+      history={util:[],temp:[],power:[]};
+      busySnap=null;
+      buildTabs(count);
+    });
+    container.appendChild(btn);
+  }
+}
+
+/* ── polling ─────────────────────────────────────────────────────────────── */
+async function poll(){
+  try{
+    const res = await fetch('/api/gpu/stats');
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const data = await res.json();
+
+    if(data.count && data.count>0){
+      buildTabs(data.count);
+      const gpu = data.gpus[activeGpu] || data.gpus[0];
+      if(gpu) renderStats(gpu);
+    }
+  } catch(e){
+    const dot = document.getElementById('statusDot');
+    const stxt = document.getElementById('statusText');
+    if(dot) dot.className='status-dot';
+    if(stxt) stxt.textContent='connection error';
+    console.warn('GPU poll error:', e);
+  }
+}
+
+/* ── init ────────────────────────────────────────────────────────────────── */
+window.addEventListener('load',()=>{
+  initCharts();
+  poll();
+  setInterval(poll, POLL_MS);
+});
+
+})();
+</script>
+</body>
+</html>

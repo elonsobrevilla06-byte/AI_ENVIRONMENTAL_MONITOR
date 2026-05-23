@@ -1,0 +1,983 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Dashboard</title>
+ <link rel="stylesheet" href="{{ url_for('static', filename='style_admin_dashboard.css') }}">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</head>
+<body>
+
+<!-- ── SIDEBAR ─────────────────────────────────────────────────────────── -->
+<aside class="sidebar" id="sidebar">
+
+  <div class="sidebar-brand">
+    <div class="sidebar-brand-icon">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
+      </svg>
+    </div>
+    <span class="sidebar-brand-label">GeoTracker</span>
+  </div>
+
+  <div class="sidebar-section">
+    <p class="sidebar-section-title">Overview</p>
+    <ul class="sidebar-nav">
+      <li>
+        <a href="#" class="active" onclick="showPage('dashboard', this); return false;">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+          Dashboard
+        </a>
+      </li>
+    </ul>
+  </div>
+
+  <div class="sidebar-section">
+    <p class="sidebar-section-title">Management</p>
+    <ul class="sidebar-nav">
+      <li>
+        <a href="/admin/management">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          Admin Management
+        </a>
+      </li>
+      <li>
+        <a href="/admin/bounds">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+          Country Bounds
+        </a>
+      </li>
+    </ul>
+  </div>
+
+  <div class="sidebar-spacer"></div>
+
+  <!-- Return to Map -->
+  <div class="sidebar-section">
+    <ul class="sidebar-nav">
+      <li>
+        <a href="/" class="sidebar-map-link">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+          Return to Map
+        </a>
+      </li>
+    </ul>
+  </div>
+
+  <div class="sidebar-footer">
+    <div class="sidebar-user">
+      <div class="sidebar-avatar">AD</div>
+      <div class="sidebar-user-info">
+        <p class="sidebar-user-name">Administrator</p>
+        <p class="sidebar-user-role">Super Admin</p>
+      </div>
+    </div>
+  </div>
+</aside>
+
+<!-- ── MAIN ─────────────────────────────────────────────────────────────── -->
+<main class="main">
+
+  <!-- TOPBAR -->
+  <header class="topbar">
+    <button class="menu-toggle" id="menuToggle" aria-label="Toggle sidebar">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
+    <span class="topbar-title" id="pageTitle">Dashboard</span>
+    <div class="topbar-right">
+      <span class="topbar-badge">Live</span>
+    </div>
+  </header>
+
+  <!-- CONTENT -->
+  <div class="content">
+
+    <!-- ── DASHBOARD PAGE ─────────────────────────────────────────────── -->
+    <div class="page-view active" id="page-dashboard">
+
+      <!-- Stat Cards -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
+          </div>
+          <p class="stat-label">Total Visits</p>
+          <p class="stat-value" id="stat-total">—</p>
+          <p class="stat-sub">all time</p>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          </div>
+          <p class="stat-label">This Month</p>
+          <p class="stat-value" id="stat-monthly">—</p>
+          <p class="stat-sub">current month</p>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          </div>
+          <p class="stat-label">Today</p>
+          <p class="stat-value" id="stat-daily">—</p>
+          <p class="stat-sub">last 24 hours</p>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+          </div>
+          <p class="stat-label">Top Country</p>
+          <p class="stat-value" id="stat-top" style="font-size:1.3rem;">—</p>
+          <p class="stat-sub">most visited</p>
+        </div>
+      </div>
+
+      <!-- All-Time Line Chart -->
+      <div class="chart-card">
+        <div class="section-header">
+          <div>
+            <p class="section-title">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
+              All-Time Country Visits
+            </p>
+            <p class="section-sub">Cumulative visits per country over time</p>
+          </div>
+        </div>
+        <div id="legend-alltime" class="chart-legend"></div>
+        <div style="position:relative;width:100%;height:280px;">
+          <canvas id="chart-alltime" role="img" aria-label="Line chart of all-time country visits">Loading…</canvas>
+        </div>
+      </div>
+
+      <!-- Monthly + Daily row -->
+      <div class="charts-row">
+
+        <!-- Monthly Pie -->
+        <div class="chart-card">
+          <div class="section-header">
+            <div>
+              <p class="section-title">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg>
+                This Month
+              </p>
+              <p class="section-sub">Country share — current month</p>
+            </div>
+          </div>
+          <div id="legend-monthly" class="chart-legend"></div>
+          <div style="position:relative;width:100%;height:240px;">
+            <canvas id="chart-monthly" role="img" aria-label="Pie chart of this month's country visits">Loading…</canvas>
+          </div>
+        </div>
+
+        <!-- Daily Bar -->
+        <div class="chart-card">
+          <div class="section-header">
+            <div>
+              <p class="section-title">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>
+                Today
+              </p>
+              <p class="section-sub">Per-country visits today</p>
+            </div>
+          </div>
+          <div style="position:relative;width:100%;height:240px;">
+            <canvas id="chart-daily" role="img" aria-label="Bar chart of today's country visits">Loading…</canvas>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Most Visited Country Map -->
+      <div class="map-card" id="map-section" style="display:none;">
+        <div class="map-card-header">
+          <div>
+            <p class="map-card-label">Most Visited Country</p>
+            <p class="map-card-country" id="map-country-name">—</p>
+          </div>
+          <div class="map-card-visits">
+            <p class="map-card-visits-num" id="map-country-visits">—</p>
+            <p class="map-card-visits-label">total visits</p>
+          </div>
+        </div>
+        <div class="map-embed">
+          <iframe id="map-iframe" src="" title="Country map" loading="lazy"></iframe>
+        </div>
+      </div>
+
+    </div><!-- /page-dashboard -->
+
+    <!-- ── ADMIN MANAGEMENT PAGE ─────────────────────────────────────── -->
+    <div class="page-view" id="page-admin-management">
+      <link rel="stylesheet" href="{{ url_for('static', filename='style_admin_management.css') }}">
+
+      <!-- Header row -->
+      <div class="am-header">
+        <div>
+          <h2 class="am-title">Admin Management</h2>
+          <p class="am-subtitle">Manage administrator accounts — add, edit, or deactivate.</p>
+        </div>
+        <button class="am-btn-add" onclick="openAdminModal()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Add Admin
+        </button>
+      </div>
+
+      <!-- Alert -->
+      <div class="form-alert" id="am-alert" style="margin-bottom:1rem;"></div>
+
+      <!-- Admin Table -->
+      <div class="am-table-card">
+        <div class="am-table-header">
+          <div class="am-search-wrap">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input class="am-search" id="am-search" type="text" placeholder="Search by username or email…" oninput="filterAdmins()" />
+          </div>
+          <button class="am-btn-refresh" onclick="loadAdmins()" title="Refresh">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+          </button>
+        </div>
+
+        <div class="am-table-wrap">
+          <table class="am-table" id="am-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Username</th>
+                <th>Email</th>
+                <th>Status</th>
+                <th>Created</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="am-tbody">
+              <tr class="am-loading-row">
+                <td colspan="6">
+                  <div class="am-spinner"></div>
+                  Loading admins…
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div><!-- /page-admin-management -->
+
+    <!-- ── ADD COUNTRY BOUNDS PAGE ─────────────────────────────────────── -->
+    <div class="page-view" id="page-add-country">
+      <div class="form-card">
+        <p class="form-title">Add Country Bounds</p>
+        <p class="form-sub">Register a country's geographic bounding box used for map queries.</p>
+
+        <div class="form-group">
+          <label class="form-label" for="country-code">Country Code</label>
+          <input class="form-input" id="country-code" type="text" placeholder="e.g. PH, US, JP" maxlength="4" autocomplete="off" style="text-transform:uppercase;" />
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="country-bounds">Bounds (JSON)</label>
+          <textarea class="form-input" id="country-bounds" placeholder='e.g. {"north":18.5,"south":4.6,"east":126.6,"west":116.9}'></textarea>
+        </div>
+
+        <button class="btn-submit" onclick="submitAddCountry()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+          Add Country
+        </button>
+
+        <div class="form-alert" id="country-alert"></div>
+      </div>
+    </div><!-- /page-add-country -->
+
+  </div><!-- /content -->
+</main>
+
+
+<!-- ── ADMIN MODALS (body-level so overlay covers full viewport) ─────── -->
+<div class="am-modal-overlay" id="am-modal-overlay" onclick="closeAdminModal(event)">
+  <div class="am-modal" id="am-modal">
+    <div class="am-modal-head">
+      <h3 class="am-modal-title" id="am-modal-title">Add Admin</h3>
+      <button class="am-modal-close" onclick="closeAdminModal()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <input type="hidden" id="modal-admin-id" value="" />
+    <div class="form-group">
+      <label class="form-label" for="modal-username">Username</label>
+      <input class="form-input" id="modal-username" type="text" placeholder="e.g. john_doe" autocomplete="off" />
+    </div>
+    <div class="form-group">
+      <label class="form-label" for="modal-email">Email</label>
+      <input class="form-input" id="modal-email" type="email" placeholder="e.g. john@example.com" autocomplete="off" />
+    </div>
+    <div class="form-group" id="modal-password-group">
+      <label class="form-label" for="modal-password">Password</label>
+      <input class="form-input" id="modal-password" type="password" placeholder="Min. 8 characters" />
+      <p class="am-field-hint" id="modal-password-hint"></p>
+    </div>
+    <div class="form-group" id="modal-status-group" style="display:none;">
+      <label class="form-label">Status</label>
+      <div class="am-toggle-wrap">
+        <label class="am-toggle">
+          <input type="checkbox" id="modal-is-active" checked />
+          <span class="am-toggle-slider"></span>
+        </label>
+        <span class="am-toggle-label" id="modal-status-label">Active</span>
+      </div>
+    </div>
+    <div class="form-alert" id="modal-alert"></div>
+    <div class="am-modal-actions">
+      <button class="am-btn-cancel" onclick="closeAdminModal()">Cancel</button>
+      <button class="am-btn-save" id="modal-save-btn" onclick="saveAdmin()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+        <span id="modal-save-label">Create Admin</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="am-modal-overlay" id="am-delete-overlay" onclick="closeDeleteModal(event)">
+  <div class="am-modal am-modal-sm" id="am-delete-modal">
+    <div class="am-modal-head">
+      <h3 class="am-modal-title">Delete Admin</h3>
+      <button class="am-modal-close" onclick="closeDeleteModal()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <p class="am-delete-msg">Are you sure you want to <strong>permanently delete</strong> <strong id="am-delete-name"></strong>? This will remove the account from the database and cannot be undone.</p>
+    <div class="am-modal-actions">
+      <button class="am-btn-cancel" onclick="closeDeleteModal()">Cancel</button>
+      <button class="am-btn-danger" id="am-confirm-delete-btn" onclick="confirmDelete()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+        Delete
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="am-modal-overlay" id="am-toggle-overlay" onclick="closeToggleModal(event)">
+  <div class="am-modal am-modal-sm" id="am-toggle-modal">
+    <div class="am-modal-head">
+      <h3 class="am-modal-title" id="am-toggle-modal-title">Change Status</h3>
+      <button class="am-modal-close" onclick="closeToggleModal()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <p class="am-delete-msg">Are you sure you want to <strong id="am-toggle-action">deactivate</strong> <strong id="am-toggle-name"></strong>?</p>
+    <div class="am-modal-actions">
+      <button class="am-btn-cancel" onclick="closeToggleModal()">Cancel</button>
+      <button class="am-btn-warning" id="am-confirm-toggle-btn" onclick="confirmToggle()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18.36 6.64A9 9 0 1 1 5.64 5.64"/><line x1="12" y1="2" x2="12" y2="12"/></svg>
+        <span>Deactivate</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ── SCRIPTS ─────────────────────────────────────────────────────────── -->
+<script>
+/* ---- PALETTE ---- */
+const PALETTE = [
+  '#2d5a3d','#4a8c5c','#7bb88a','#c8a84b','#a0522d',
+  '#5b7fa6','#9a6b4b','#3d7a5e','#b07d62','#637a55'
+];
+
+/* ---- SIDEBAR NAV ---- */
+const pageTitles = {
+  'dashboard':        'Dashboard',
+  'admin-management': 'Admin Management',
+  'add-country':      'Add Country Bounds'
+};
+
+/* ---- ADMIN MANAGEMENT ---- */
+let allAdmins = [];
+let deleteTargetId = null;
+let toggleTargetId = null;
+let toggleTargetActive = null;
+
+async function loadAdmins() {
+  const tbody = document.getElementById('am-tbody');
+  tbody.innerHTML = '<tr class="am-loading-row"><td colspan="6"><div class="am-spinner"></div>Loading admins…</td></tr>';
+  try {
+    const res  = await fetch('/api/admin/');
+    const data = await res.json();
+    allAdmins  = data.data || [];
+    renderAdmins(allAdmins);
+  } catch (err) {
+    tbody.innerHTML = '<tr class="am-loading-row"><td colspan="6" style="color:#a0291c;">Failed to load admins.</td></tr>';
+  }
+}
+
+function renderAdmins(list) {
+  const tbody = document.getElementById('am-tbody');
+  if (!list.length) {
+    tbody.innerHTML = '<tr class="am-loading-row"><td colspan="6">No admin accounts found.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = list.map(a => {
+    const created = a.created_at ? new Date(a.created_at).toLocaleDateString('en-US', { year:'numeric', month:'short', day:'numeric' }) : '—';
+    const active  = a.is_active !== false;
+    return `<tr>
+      <td class="am-td-id">#${a.id}</td>
+      <td class="am-td-user">
+        <div class="am-avatar">${(a.username || '?')[0].toUpperCase()}</div>
+        <span>${a.username}</span>
+      </td>
+      <td class="am-td-email">${a.email}</td>
+      <td><span class="am-badge ${active ? 'am-badge-active' : 'am-badge-inactive'}">${active ? 'Active' : 'Inactive'}</span></td>
+      <td class="am-td-date">${created}</td>
+      <td class="am-td-actions">
+        <button class="am-action-btn am-action-edit" title="Edit" onclick="openEditModal(${JSON.stringify(a).replace(/"/g,'&quot;')})">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        </button>
+        <button class="am-action-btn ${active ? 'am-action-deactivate' : 'am-action-activate'}" title="${active ? 'Deactivate' : 'Activate'}" onclick="openToggleModal(${a.id}, '${a.username}', ${active})">
+          ${active
+            ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18.36 6.64A9 9 0 1 1 5.64 5.64"/><line x1="12" y1="2" x2="12" y2="12"/></svg>'
+            : '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18.36 6.64A9 9 0 1 1 5.64 5.64"/><line x1="12" y1="2" x2="12" y2="12"/></svg>'
+          }
+        </button>
+        <button class="am-action-btn am-action-delete" title="Delete permanently" onclick="openDeleteModal(${a.id}, '${a.username}')">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+        </button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function filterAdmins() {
+  const q = document.getElementById('am-search').value.toLowerCase();
+  renderAdmins(q ? allAdmins.filter(a => a.username.toLowerCase().includes(q) || a.email.toLowerCase().includes(q)) : allAdmins);
+}
+
+function openAdminModal() {
+  document.getElementById('am-modal-title').textContent   = 'Add Admin';
+  document.getElementById('modal-save-label').textContent = 'Create Admin';
+  document.getElementById('modal-admin-id').value = '';
+  document.getElementById('modal-username').value = '';
+  document.getElementById('modal-email').value    = '';
+  document.getElementById('modal-password').value = '';
+  document.getElementById('modal-password-hint').textContent = '';
+  document.getElementById('modal-status-group').style.display = 'none';
+  document.getElementById('modal-password-group').style.display = '';
+  document.getElementById('modal-alert').className = 'form-alert';
+  document.getElementById('am-modal-overlay').classList.add('open');
+}
+
+function openEditModal(admin) {
+  document.getElementById('am-modal-title').textContent   = 'Edit Admin';
+  document.getElementById('modal-save-label').textContent = 'Save Changes';
+  document.getElementById('modal-admin-id').value         = admin.id;
+  document.getElementById('modal-username').value         = admin.username || '';
+  document.getElementById('modal-email').value            = admin.email    || '';
+  document.getElementById('modal-password').value         = '';
+  document.getElementById('modal-password-hint').textContent = 'Leave blank to keep current password.';
+  document.getElementById('modal-status-group').style.display = '';
+  document.getElementById('modal-is-active').checked = admin.is_active !== false;
+  document.getElementById('modal-status-label').textContent  = admin.is_active !== false ? 'Active' : 'Inactive';
+  document.getElementById('modal-alert').className = 'form-alert';
+  document.getElementById('am-modal-overlay').classList.add('open');
+
+  document.getElementById('modal-is-active').onchange = function() {
+    document.getElementById('modal-status-label').textContent = this.checked ? 'Active' : 'Inactive';
+  };
+}
+
+function closeAdminModal(e) {
+  if (e && e.target !== document.getElementById('am-modal-overlay')) return;
+  document.getElementById('am-modal-overlay').classList.remove('open');
+}
+
+async function saveAdmin() {
+  const adminId  = document.getElementById('modal-admin-id').value;
+  const username = document.getElementById('modal-username').value.trim();
+  const email    = document.getElementById('modal-email').value.trim();
+  const password = document.getElementById('modal-password').value;
+  const alertEl  = document.getElementById('modal-alert');
+  alertEl.className = 'form-alert';
+
+  const isEdit = !!adminId;
+
+  if (!username || !email) {
+    alertEl.className = 'form-alert error';
+    alertEl.textContent = 'Username and email are required.';
+    return;
+  }
+  if (!isEdit && !password) {
+    alertEl.className = 'form-alert error';
+    alertEl.textContent = 'Password is required for new admins.';
+    return;
+  }
+
+  const btn = document.getElementById('modal-save-btn');
+  btn.disabled = true;
+
+  try {
+    let res, data;
+    if (isEdit) {
+      const body = { username, email };
+      if (password) body.password = password;
+      body.is_active = document.getElementById('modal-is-active').checked;
+      res  = await fetch(`/api/admin/${adminId}`, { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });
+      data = await res.json();
+    } else {
+      res  = await fetch('/api/admin/', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ username, email, password }) });
+      data = await res.json();
+    }
+
+    if (data.status === 'success' || res.ok) {
+      document.getElementById('am-modal-overlay').classList.remove('open');
+      showAmAlert('success', isEdit ? '✓ Admin updated successfully.' : '✓ Admin created successfully.');
+      loadAdmins();
+    } else {
+      alertEl.className = 'form-alert error';
+      alertEl.textContent = data.message || 'Operation failed.';
+    }
+  } catch (err) {
+    alertEl.className = 'form-alert error';
+    alertEl.textContent = 'Network error: ' + err.message;
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function openDeleteModal(id, username) {
+  deleteTargetId = id;
+  document.getElementById('am-delete-name').textContent = username;
+  document.getElementById('am-delete-overlay').classList.add('open');
+}
+
+function closeDeleteModal(e) {
+  if (e && e.target !== document.getElementById('am-delete-overlay')) return;
+  document.getElementById('am-delete-overlay').classList.remove('open');
+  deleteTargetId = null;
+}
+
+async function confirmDelete() {
+  if (!deleteTargetId) return;
+  const btn = document.getElementById('am-confirm-delete-btn');
+  btn.disabled = true;
+  try {
+    const res  = await fetch(`/api/admin/${deleteTargetId}`, { method: 'DELETE' });
+    const data = await res.json();
+    document.getElementById('am-delete-overlay').classList.remove('open');
+    deleteTargetId = null;
+    if (data.status === 'success' || res.ok) {
+      showAmAlert('success', '✓ Admin deleted permanently.');
+    } else {
+      showAmAlert('error', data.message || 'Failed to delete admin.');
+    }
+    loadAdmins();
+  } catch (err) {
+    showAmAlert('error', 'Network error: ' + err.message);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+/* ---- TOGGLE ACTIVE / INACTIVE ---- */
+function openToggleModal(id, username, currentlyActive) {
+  toggleTargetId     = id;
+  toggleTargetActive = currentlyActive;
+  document.getElementById('am-toggle-name').textContent = username;
+  const action = currentlyActive ? 'deactivate' : 'activate';
+  document.getElementById('am-toggle-action').textContent = action;
+  const btn = document.getElementById('am-confirm-toggle-btn');
+  btn.className = currentlyActive ? 'am-btn-warning' : 'am-btn-save';
+  btn.querySelector('span').textContent = currentlyActive ? 'Deactivate' : 'Activate';
+  document.getElementById('am-toggle-overlay').classList.add('open');
+}
+
+function closeToggleModal(e) {
+  if (e && e.target !== document.getElementById('am-toggle-overlay')) return;
+  document.getElementById('am-toggle-overlay').classList.remove('open');
+  toggleTargetId = null;
+  toggleTargetActive = null;
+}
+
+async function confirmToggle() {
+  if (toggleTargetId === null) return;
+  const btn = document.getElementById('am-confirm-toggle-btn');
+  btn.disabled = true;
+  const newState = !toggleTargetActive;
+  try {
+    const res  = await fetch(`/api/admin/${toggleTargetId}`, { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ is_active: newState }) });
+    const data = await res.json();
+    document.getElementById('am-toggle-overlay').classList.remove('open');
+    const action = toggleTargetActive ? 'deactivated' : 'activated';
+    toggleTargetId = null;
+    toggleTargetActive = null;
+    if (data.status === 'success' || res.ok) {
+      showAmAlert('success', `✓ Admin ${action} successfully.`);
+    } else {
+      showAmAlert('error', data.message || `Failed to update admin status.`);
+    }
+    loadAdmins();
+  } catch (err) {
+    showAmAlert('error', 'Network error: ' + err.message);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function showAmAlert(type, msg) {
+  const el = document.getElementById('am-alert');
+  el.className = 'form-alert ' + type;
+  el.textContent = msg;
+  setTimeout(() => { el.className = 'form-alert'; }, 4000);
+}
+
+function showPage(id, el) {
+  document.querySelectorAll('.page-view').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.sidebar-nav a, .sidebar-nav button').forEach(a => a.classList.remove('active'));
+  document.getElementById('page-' + id).classList.add('active');
+  if (el) el.classList.add('active');
+  document.getElementById('pageTitle').textContent = pageTitles[id] || 'Dashboard';
+  document.getElementById('sidebar').classList.remove('open');
+  if (id === 'admin-management') loadAdmins();
+}
+
+document.getElementById('menuToggle').addEventListener('click', () => {
+  document.getElementById('sidebar').classList.toggle('open');
+});
+
+/* ---- DATA FETCH ---- */
+async function loadDashboard() {
+  try {
+    const [allRes, monthlyRes, dailyRes] = await Promise.all([
+      fetch('/api/country_visits/'),
+      fetch('/api/country_visits/monthly'),
+      fetch('/api/country_visits/daily')
+    ]);
+    const allData     = await allRes.json();
+    const monthlyData = await monthlyRes.json();
+    const dailyData   = await dailyRes.json();
+
+    buildStats(allData, monthlyData, dailyData);
+    buildLineChart(allData.data || []);
+    buildPieChart(monthlyData.data || []);
+    buildBarChart(dailyData.data || []);
+    buildTopCountryMap(allData.data || []);
+  } catch (err) {
+    console.error('Dashboard load error:', err);
+  }
+}
+
+/* ---- STAT CARDS ---- */
+function buildStats(all, monthly, daily) {
+  const allRows     = all.data     || [];
+  const monthlyRows = monthly.data || [];
+  const dailyRows   = daily.data   || [];
+
+  const total   = allRows.reduce((s, r) => s + (r.visit_count || r.count || 0), 0);
+  const monthT  = monthlyRows.reduce((s, r) => s + (r.visit_count || r.count || 0), 0);
+  const dailyT  = dailyRows.reduce((s, r) => s + (r.visit_count || r.count || 0), 0);
+
+  let topCountry = '—';
+  if (allRows.length) {
+    const sorted = [...allRows].sort((a, b) =>
+      (b.visit_count || b.count || 0) - (a.visit_count || a.count || 0)
+    );
+    topCountry = sorted[0].country_code || '—';
+  }
+
+  document.getElementById('stat-total').textContent   = total.toLocaleString();
+  document.getElementById('stat-monthly').textContent  = monthT.toLocaleString();
+  document.getElementById('stat-daily').textContent    = dailyT.toLocaleString();
+  document.getElementById('stat-top').textContent      = topCountry;
+}
+
+/* ---- ALL-TIME LINE CHART ---- */
+function buildLineChart(rows) {
+  /* Group by country; each row expected: { country_code, visit_count, date } */
+  /* If API returns cumulative totals per country without dates,
+     we fake a simple single-point line per country for display.           */
+  const byCountry = {};
+  rows.forEach(r => {
+    const cc = r.country_code;
+    if (!byCountry[cc]) byCountry[cc] = [];
+    byCountry[cc].push({ date: r.date || r.visited_at || r.created_at || null, count: r.visit_count || r.count || 0 });
+  });
+
+  const countries = Object.keys(byCountry);
+
+  /* Collect all unique dates, sort */
+  const allDates = [...new Set(rows.map(r => (r.date || r.visited_at || r.created_at || '').slice(0,10)))].filter(Boolean).sort();
+
+  let labels, datasets;
+
+  if (allDates.length > 1) {
+    labels = allDates;
+    datasets = countries.map((cc, i) => {
+      const map = {};
+      byCountry[cc].forEach(p => { if (p.date) map[p.date.slice(0,10)] = (map[p.date.slice(0,10)] || 0) + p.count; });
+      return {
+        label: cc,
+        data: allDates.map(d => map[d] || 0),
+        borderColor: PALETTE[i % PALETTE.length],
+        backgroundColor: PALETTE[i % PALETTE.length] + '22',
+        tension: 0.4,
+        fill: false,
+        pointRadius: 3,
+        borderDash: i % 3 === 1 ? [6,3] : i % 3 === 2 ? [2,2] : [],
+      };
+    });
+  } else {
+    /* No date info — show total per country as a single-bar line */
+    labels = countries;
+    datasets = [{
+      label: 'Total Visits',
+      data: countries.map(cc => byCountry[cc].reduce((s,p) => s + p.count, 0)),
+      borderColor: PALETTE[0],
+      backgroundColor: PALETTE[0] + '22',
+      tension: 0.4,
+      fill: true,
+      pointRadius: 5,
+    }];
+  }
+
+  /* Build legend */
+  const legendEl = document.getElementById('legend-alltime');
+  datasets.forEach((ds, i) => {
+    const span = document.createElement('span');
+    span.className = 'legend-item';
+    span.innerHTML = `<span class="legend-swatch" style="background:${ds.borderColor};"></span>${ds.label}`;
+    legendEl.appendChild(span);
+  });
+
+  new Chart(document.getElementById('chart-alltime'), {
+    type: 'line',
+    data: { labels, datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: {
+          ticks: { color: '#4a6655', font: { family: 'DM Sans', size: 11 }, maxRotation: 45, autoSkip: true },
+          grid: { color: 'rgba(200,221,208,0.35)' }
+        },
+        y: {
+          beginAtZero: true,
+          ticks: { color: '#4a6655', font: { family: 'DM Sans', size: 11 } },
+          grid: { color: 'rgba(200,221,208,0.35)' }
+        }
+      }
+    }
+  });
+}
+
+/* ---- MONTHLY PIE CHART ---- */
+function buildPieChart(rows) {
+  const labels = rows.map(r => r.country_code);
+  const data   = rows.map(r => r.visit_count || r.count || 0);
+  const colors = labels.map((_, i) => PALETTE[i % PALETTE.length]);
+  const total  = data.reduce((s, v) => s + v, 0);
+
+  /* Legend */
+  const legendEl = document.getElementById('legend-monthly');
+  labels.forEach((l, i) => {
+    const pct = total ? Math.round(data[i] / total * 100) : 0;
+    const span = document.createElement('span');
+    span.className = 'legend-item';
+    span.innerHTML = `<span class="legend-swatch" style="background:${colors[i]};"></span>${l} ${pct}%`;
+    legendEl.appendChild(span);
+  });
+
+  new Chart(document.getElementById('chart-monthly'), {
+    type: 'pie',
+    data: {
+      labels,
+      datasets: [{
+        data,
+        backgroundColor: colors,
+        borderColor: '#fff',
+        borderWidth: 2,
+        hoverOffset: 8
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: ctx => {
+              const pct = total ? Math.round(ctx.parsed / total * 100) : 0;
+              return ` ${ctx.label}: ${ctx.parsed.toLocaleString()} (${pct}%)`;
+            }
+          }
+        }
+      }
+    }
+  });
+}
+
+/* ---- DAILY BAR CHART ---- */
+function buildBarChart(rows) {
+  const labels = rows.map(r => r.country_code);
+  const data   = rows.map(r => r.visit_count || r.count || 0);
+  const colors = labels.map((_, i) => PALETTE[i % PALETTE.length]);
+
+  new Chart(document.getElementById('chart-daily'), {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Visits Today',
+        data,
+        backgroundColor: colors,
+        borderColor: colors.map(c => c),
+        borderWidth: 1.5,
+        borderRadius: 6,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: {
+          ticks: { color: '#4a6655', font: { family: 'DM Sans', size: 11 }, autoSkip: false },
+          grid: { display: false }
+        },
+        y: {
+          beginAtZero: true,
+          ticks: { color: '#4a6655', font: { family: 'DM Sans', size: 11 } },
+          grid: { color: 'rgba(200,221,208,0.35)' }
+        }
+      }
+    }
+  });
+}
+
+/* ---- TOP COUNTRY MAP ---- */
+function buildTopCountryMap(rows) {
+  if (!rows.length) return;
+  const sorted = [...rows].sort((a, b) =>
+    (b.visit_count || b.count || 0) - (a.visit_count || a.count || 0)
+  );
+  const top   = sorted[0];
+  const cc    = top.country_code;
+  const count = (top.visit_count || top.count || 0).toLocaleString();
+
+  document.getElementById('map-country-name').textContent  = cc;
+  document.getElementById('map-country-visits').textContent = count;
+
+  /* OpenStreetMap nominatim iframe for the country */
+  const iframeSrc = `https://www.openstreetmap.org/export/embed.html?bbox=-180,-90,180,90&layer=mapnik&marker=0,0`;
+  /* Use a simple embed centered on the country via bbox from country_bounds API if available */
+  fetch(`/api/country_bounds/?code=${cc}`)
+    .then(r => r.json())
+    .then(d => {
+      const bounds = d.data && d.data[0] && d.data[0].bounds;
+      if (bounds) {
+        const b = typeof bounds === 'string' ? JSON.parse(bounds) : bounds;
+        /* bounds keys may vary — try common shapes */
+        const west  = b.west  ?? b.minLng ?? b[0];
+        const south = b.south ?? b.minLat ?? b[1];
+        const east  = b.east  ?? b.maxLng ?? b[2];
+        const north = b.north ?? b.maxLat ?? b[3];
+        if (west != null) {
+          const src = `https://www.openstreetmap.org/export/embed.html?bbox=${west},${south},${east},${north}&layer=mapnik`;
+          document.getElementById('map-iframe').src = src;
+        }
+      } else {
+        document.getElementById('map-iframe').src =
+          `https://www.openstreetmap.org/export/embed.html?bbox=-180,-90,180,90&layer=mapnik`;
+      }
+    })
+    .catch(() => {
+      document.getElementById('map-iframe').src =
+        `https://www.openstreetmap.org/export/embed.html?bbox=-180,-90,180,90&layer=mapnik`;
+    });
+
+  document.getElementById('map-section').style.display = 'flex';
+}
+
+/* ---- FORM SUBMISSIONS ---- */
+async function submitAddAdmin() {
+  const username = document.getElementById('admin-username').value.trim();
+  const email    = document.getElementById('admin-email').value.trim();
+  const password = document.getElementById('admin-password').value;
+  const alertEl  = document.getElementById('admin-alert');
+
+  alertEl.className = 'form-alert';
+
+  if (!username || !email || !password) {
+    alertEl.className = 'form-alert error';
+    alertEl.textContent = 'All fields are required.';
+    return;
+  }
+
+  try {
+    const res = await fetch('/api/admin/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, email, password })
+    });
+    const data = await res.json();
+    if (data.status === 'success' || res.ok) {
+      alertEl.className = 'form-alert success';
+      alertEl.textContent = '✓ Admin account created successfully.';
+      document.getElementById('admin-username').value = '';
+      document.getElementById('admin-email').value    = '';
+      document.getElementById('admin-password').value = '';
+    } else {
+      alertEl.className = 'form-alert error';
+      alertEl.textContent = data.message || 'Failed to create admin.';
+    }
+  } catch (err) {
+    alertEl.className = 'form-alert error';
+    alertEl.textContent = 'Network error: ' + err.message;
+  }
+}
+
+async function submitAddCountry() {
+  const code    = document.getElementById('country-code').value.trim().toUpperCase();
+  const boundsR = document.getElementById('country-bounds').value.trim();
+  const alertEl = document.getElementById('country-alert');
+
+  alertEl.className = 'form-alert';
+
+  if (!code || !boundsR) {
+    alertEl.className = 'form-alert error';
+    alertEl.textContent = 'Country code and bounds are required.';
+    return;
+  }
+
+  let bounds;
+  try {
+    bounds = JSON.parse(boundsR);
+  } catch {
+    alertEl.className = 'form-alert error';
+    alertEl.textContent = 'Bounds must be valid JSON.';
+    return;
+  }
+
+  try {
+    const res = await fetch('/api/country_bounds/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ country_code: code, bounds })
+    });
+    const data = await res.json();
+    if (data.status === 'success' || res.ok) {
+      alertEl.className = 'form-alert success';
+      alertEl.textContent = `✓ Country bounds for ${code} added successfully.`;
+      document.getElementById('country-code').value   = '';
+      document.getElementById('country-bounds').value = '';
+    } else {
+      alertEl.className = 'form-alert error';
+      alertEl.textContent = data.message || 'Failed to add country.';
+    }
+  } catch (err) {
+    alertEl.className = 'form-alert error';
+    alertEl.textContent = 'Network error: ' + err.message;
+  }
+}
+
+/* ---- INIT ---- */
+loadDashboard();
+</script>
+</body>
+</html>

@@ -8,6 +8,7 @@ import base64
 import ee
 from PIL import Image
 from geopy.geocoders import Nominatim
+from database_models.country_visits import add_country_visit
 
 analysis_bp = Blueprint('analysis_bp', __name__)
 
@@ -289,6 +290,7 @@ def before_after():
                 response = requests.get(thumbnail_url)
                 if response.status_code == 200:
                     before_base64 = base64.b64encode(response.content).decode('utf-8')
+                    add_country_visit(country)
                 print(region)
             except Exception as e:
                 print(f"Error: {e}")
