@@ -4,7 +4,7 @@ from functools import wraps
 from flask import request, redirect, url_for
 import jwt
 
-SECRET_KEY = os.environ.get("JWT_SECRET_KEY", "change-this-in-production")
+SECRET_KEY = os.environ.get("JWT_SECRET_KEY")
 
 logger = logging.getLogger(__name__)
 

@@ -13,6 +13,7 @@ from auth_middleware import jwt_required
 
 ee.Initialize(project='golden-system-465607-e5')
 
+
 # ── Logging setup ─────────────────────────────────────────────────────────────
 logging.basicConfig(
     level=logging.DEBUG,
@@ -20,7 +21,7 @@ logging.basicConfig(
 )
 
 app = Flask(__name__)
-app.secret_key = os.environ.get("FLASK_SECRET_KEY", "change-this-in-production")
+app.secret_key = os.environ.get("FLASK_SECRET_KEY")
 
 
 # ── Blueprints ────────────────────────────────────────────────────────────────
