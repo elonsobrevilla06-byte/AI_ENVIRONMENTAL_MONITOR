@@ -241,9 +241,11 @@ jupyterlab_server==2.28.0
 jupyterlab_widgets==3.0.16
 kiwisolver==1.5.0
 lark==1.3.1
+markdown-it-py==4.2.0
 MarkupSafe==3.0.3
 matplotlib==3.10.9
 matplotlib-inline==0.2.2
+mdurl==0.1.2
 mistune==3.2.1
 mpmath==1.3.0
 narwhals==2.21.0
@@ -255,6 +257,7 @@ networkx==3.6.1
 notebook==7.5.6
 notebook_shim==0.2.4
 numpy==2.4.4
+nvidia-ml-py==13.595.45
 packaging==26.2
 pandas==3.0.2
 pandocfilters==1.5.1
@@ -274,6 +277,7 @@ pyasn1==0.6.3
 pyasn1_modules==0.4.2
 pycparser==3.0
 Pygments==2.20.0
+PyJWT==2.13.0
 pyparsing==3.3.2
 pyperclip==1.11.0
 pyshp==3.0.3
@@ -289,6 +293,7 @@ requests==2.33.1
 rfc3339-validator==0.1.4
 rfc3986-validator==0.1.1
 rfc3987-syntax==1.1.0
+rich==15.0.0
 rpds-py==0.30.0
 scooby==0.11.2
 Send2Trash==2.1.0
@@ -299,6 +304,8 @@ stack-data==0.6.3
 sympy==1.14.0
 terminado==0.18.1
 tinycss2==1.4.0
+torch==2.12.0+cu126
+torchvision==0.27.0+cu126
 tornado==6.5.5
 traitlets==5.15.0
 traittypes==0.2.3
@@ -314,7 +321,6 @@ websocket-client==1.9.0
 Werkzeug==3.1.8
 widgetsnbextension==4.0.15
 xyzservices==2026.3.0
-
 ```
 
 > ⚠️ Do **NOT** add `torch` or `torchvision` to `requirements.txt`.
