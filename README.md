@@ -329,25 +329,6 @@ xyzservices==2026.3.0
 
 ---
 
-## 📁 PROJECT STRUCTURE
-
-```
-ecovision/
-│
-├── app.py                  # Flask backend / main entry point
-├── gpu_monitor_cli.py      # EcoVision GPU Monitor CLI (run in second terminal)
-├── requirements.txt        # Python dependencies (no torch here)
-│
-├── templates/
-│   └── index.html          # Main frontend (Leaflet map + AI chat)
-│
-└── static/
-    ├── style.css           # Stylesheet
-    └── images/
-        ├── logo.png        # App logo / favicon
-        └── bot_profile.png # AI chat avatar
-```
-
 ---
 
 ## 🔧 TROUBLESHOOTING
