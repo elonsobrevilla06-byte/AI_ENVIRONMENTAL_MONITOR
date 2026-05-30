@@ -36,7 +36,6 @@ Philippines and beyond, powered by a local Ollama AI model running on your GPU.
 
 ```bash
 git clone https://github.com/yourusername/ecovision.git
-cd ecovision
 ```
 
 ---
