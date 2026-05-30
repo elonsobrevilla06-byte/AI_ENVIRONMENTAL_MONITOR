@@ -1,4 +1,4 @@
-# 🌍 ENVIRONMENTAL MONITOR / AI
+# 🌍 ENVIRONMENTAL MONITOR / AI — EcoVision
 
 > **Satellite Analysis · Vegetation Tracking · AI Insights**
 
@@ -16,7 +16,7 @@ Philippines and beyond, powered by a local Ollama AI model running on your GPU.
 - 🌿 NDVI vegetation tracking and forest coverage estimation
 - ⚡ GPU-accelerated inference with **CUDA 12.6** support
 - 💬 Real-time AI chat assistant with streamed responses
-- 🖥️ GPU health monitoring via dedicated CLI tool
+- 🖥️ GPU health monitoring via dedicated CLI tool (EcoVision GPU Monitor)
 
 ---
 
@@ -35,8 +35,8 @@ Philippines and beyond, powered by a local Ollama AI model running on your GPU.
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/yourusername/environmental-monitor-ai.git
-cd environmental-monitor-ai
+git clone https://github.com/yourusername/ecovision.git
+cd ecovision
 ```
 
 ---
@@ -94,7 +94,7 @@ http://localhost:5000
 
 ---
 
-### Terminal 2 — GPU Health Monitor
+### Terminal 2 — GPU Health Monitor (EcoVision GPU Monitor)
 
 Open a **second terminal** in VS Code and run:
 
@@ -105,14 +105,49 @@ python gpu_monitor_cli.py
 > 💡 In VS Code: use **Ctrl + Shift + `** to open a new terminal,
 > or click the **Split Terminal** icon to view both side by side.
 
-This displays real-time GPU stats including:
+#### Optional Flags
 
-| Metric          | Description                  |
-|-----------------|------------------------------|
-| GPU Utilization | Processing load (%)          |
-| VRAM Usage      | Memory used / total (MB)     |
-| Temperature     | GPU core temperature (°C)    |
-| Power Draw      | Current power consumption (W)|
+| Flag                  | Description                                          | Default      |
+|-----------------------|------------------------------------------------------|--------------|
+| `--interval <secs>`   | Refresh rate in seconds                              | `1`          |
+| `--gpu <index>`       | GPU device index to monitor                          | `0`          |
+| `--log`               | Also write metrics to `gpu_log.csv`                  | off          |
+| `--no-color`          | Plain text output (useful for piping or CI)          | off          |
+
+#### Examples
+
+```bash
+# Default live dashboard, refresh every 1 second
+python gpu_monitor_cli.py
+
+# Refresh every 2 seconds
+python gpu_monitor_cli.py --interval 2
+
+# Also log metrics to gpu_log.csv
+python gpu_monitor_cli.py --log
+
+# Plain text output (no colour)
+python gpu_monitor_cli.py --no-color
+
+# Monitor a specific GPU (e.g. second GPU at index 1)
+python gpu_monitor_cli.py --gpu 1
+```
+
+#### What It Displays
+
+| Metric              | Description                                    |
+|---------------------|------------------------------------------------|
+| Core Util           | GPU core utilisation (%)                       |
+| Mem B/W             | Memory bandwidth utilisation (%)               |
+| VRAM                | Used / total VRAM in MB + percentage           |
+| Temperature         | GPU core temperature (°C) — green/yellow/red   |
+| Power               | Current draw (W) vs power limit (W)            |
+| SM Clock            | Shader / streaming multiprocessor clock (MHz)  |
+| Mem Clock           | Memory clock speed (MHz)                       |
+| Fan                 | Fan speed (%) if available                     |
+| GPU Processes       | Active compute PIDs and their VRAM usage       |
+
+> Metrics are colour-coded: 🟢 Normal · 🟡 Moderate · 🔴 High
 
 ---
 
@@ -125,6 +160,7 @@ requests
 numpy
 Pillow
 pynvml
+rich
 ```
 
 > ⚠️ Do **NOT** add `torch` or `torchvision` to `requirements.txt`.
@@ -133,19 +169,39 @@ pynvml
 
 ---
 
+## 📁 PROJECT STRUCTURE
+
+```
+ecovision/
+│
+├── app.py                  # Flask backend / main entry point
+├── gpu_monitor_cli.py      # EcoVision GPU Monitor CLI (run in second terminal)
+├── requirements.txt        # Python dependencies (no torch here)
+│
+├── templates/
+│   └── index.html          # Main frontend (Leaflet map + AI chat)
+│
+└── static/
+    ├── style.css           # Stylesheet
+    └── images/
+        ├── logo.png        # App logo / favicon
+        └── bot_profile.png # AI chat avatar
+```
 
 ---
 
 ## 🔧 TROUBLESHOOTING
 
-| Problem                          | Fix                                                                 |
-|----------------------------------|---------------------------------------------------------------------|
-| Ollama not responding            | Run `ollama serve` in a separate terminal                           |
-| CUDA not detected                | Run `python -c "import torch; print(torch.cuda.is_available())"`   |
-| Phi-3 model not found            | Run `ollama pull phi3`                                              |
-| Port 5000 already in use         | Change the port in `app.py` or kill the existing process           |
-| torch installed without CUDA     | Reinstall using the CUDA wheel URL in Step 2                        |
-| GPU monitor shows no data        | Ensure `pynvml` is installed and an NVIDIA GPU is present          |
+| Problem                          | Fix                                                                          |
+|----------------------------------|------------------------------------------------------------------------------|
+| Ollama not responding            | Run `ollama serve` in a separate terminal                                    |
+| CUDA not detected                | Run `python -c "import torch; print(torch.cuda.is_available())"`             |
+| Phi-3 model not found            | Run `ollama pull phi3`                                                       |
+| Port 5000 already in use         | Change the port in `app.py` or kill the existing process                     |
+| torch installed without CUDA     | Reinstall using the CUDA wheel URL in Step 2                                 |
+| GPU monitor shows no data        | Ensure `pynvml` is installed: `pip install pynvml`                           |
+| GPU monitor has no colours/bars  | Ensure `rich` is installed: `pip install rich`                               |
+| gpu_log.csv not created          | Add the `--log` flag: `python gpu_monitor_cli.py --log`                      |
 
 ---
 
@@ -159,8 +215,8 @@ pynvml
 [ ] ollama serve  (running in background)
 [ ] pip3 install torch torchvision --index-url https://download.pytorch.org/whl/cu126
 [ ] pip install -r requirements.txt
-[ ] python app.py  (Terminal 1)
-[ ] python gpu_monitor_cli.py  (Terminal 2 in VS Code)
+[ ] python app.py                  ← Terminal 1
+[ ] python gpu_monitor_cli.py      ← Terminal 2 in VS Code
 [ ] Open http://localhost:5000 in browser
 ```
 
@@ -177,6 +233,11 @@ pynvml
 
 ---
 
+## 📄 LICENSE
+
+MIT License — feel free to use, modify, and distribute.
+
+---
 
 ## 🙏 ACKNOWLEDGEMENTS
 
@@ -185,3 +246,5 @@ pynvml
 - [Microsoft Phi-3](https://azure.microsoft.com/en-us/products/phi-3) — AI language model
 - [PyTorch](https://pytorch.org/) — CUDA-accelerated ML framework
 - [Chart.js](https://www.chartjs.org/) — Data visualization
+- [Rich](https://github.com/Textualize/rich) — Terminal UI for GPU monitor
+- [pynvml](https://github.com/gpuopenanalytics/pynvml) — NVIDIA GPU metrics
